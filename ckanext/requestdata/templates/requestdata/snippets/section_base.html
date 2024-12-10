@@ -1,0 +1,37 @@
+{#
+
+Creates base layout for a section.
+
+state - The state in which a request belongs to. Can be new|open|archive.
+title - The title of the section.
+requests - The requests that need to be shown.
+
+Example usage:
+  {% snippet 'requestdata/snippets/section_base.html', state='new', title='New', requests=requests_new %}
+
+#}
+
+{% set total_requests = requests|length  %}
+
+<section class="requested-data-container">
+  <div class="requested-data-message"></div>
+  <br>
+  <div class="requested-data-container__header">
+    <span class="requested-data-container__header--title">{{ title }} [{{ total_requests }}]</span>
+
+    {% if total_requests and total_requests > 0 and state != 'archive' %}
+      <span class="requested-data-container__header--requested">{{ _('Requested by') }}:</span>
+      <span class="requested-data-container__header--actions">{{ _('Actions') }}</span>
+    {% endif %}
+  </div>
+
+  {% if requests | length > 0 %}
+    <div class="requested-data-container__content">
+      {% for item in requests %}
+        {% snippet 'requestdata/snippets/section_item_' + state + '.html', item=item, template_type=template_type, index=loop.index %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>{{ _('No requests found.') }}</p>
+  {% endif %}
+</section>

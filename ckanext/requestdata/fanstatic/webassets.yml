@@ -1,0 +1,10 @@
+requestdata:
+  filters: rjsmin
+  extra:
+    preload:
+      - base/main
+
+requestdata-css:
+  output: ckanet-requestdata/%(version)s_requestdata.css
+  contents:
+    - css/main.css

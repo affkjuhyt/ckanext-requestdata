@@ -1,0 +1,28 @@
+{% if org_name %}
+  {% set asc = "?order_by=asc|org:"+ org_name %}
+  {% set desc = '?order_by=desc|org:' + org_name %}
+  {% set req = '?order_by=requests|org:' + org_name %}
+  {% set shared = '?order_by=shared|org:' + org_name %}
+  {% set most_recent = '?order_by=most_recent|org:' + org_name %}
+{% else %}
+  {% set asc = "?order_by=asc" %}
+  {% set desc = '?order_by=desc' %}
+  {% set req = '?order_by=requests' %}
+  {% set shared = '?order_by=shared' %}
+  {% set most_recent = '?order_by=most_recent' %}
+{% endif %}
+
+<div class="dropdown requested-data-order-btn">
+  <span style="text-transform: uppercase;">Order by: &nbsp;</span>
+  <a class="dropdown-toggle" data-toggle="dropdown">
+    <span class="requested-data-order-btn--current-order">{{ current_order_name }}</span>
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu dropdown-menu-left">
+    <li><a href="{{ service_url }}{{ most_recent }}">Most Recent</a></li>
+    <li><a href="{{ service_url }}{{ asc }}">Alphabetical (A-Z)</a></li>
+    <li><a href="{{ service_url }}{{ desc }}">Alphabetical (Z-A)</a></li>
+    <li><a href="{{ service_url }}{{ req }}">Requests Rate</a></li>
+    <li><a href="{{ service_url }}{{ shared }}">Sharing Rate</a></li>
+  </ul>
+</div>

@@ -1,0 +1,19 @@
+{% ckan_extends %}
+
+{% import 'macros/form.html' as form %}
+
+{% block package_metadata_fields_maintainer %}
+  {% set tag_attrs = {'data-module': 'autocomplete', 'data-module-tags': ''} %}
+
+  {% if data.name %}
+    {% set maintainers_value = h.requestdata_convert_id_to_email(data.maintainer) %}
+  {% else %}
+    {% if data.maintainer is defined %}
+      {% set maintainers_value = data.maintainer %}
+    {% else %}
+      {% set maintainers_value = c.userobj.email %}
+    {% endif %}
+  {% endif %}
+
+  {{ form.input('maintainer', label=_('Maintainers'), id='field-maintainer', placeholder=_('joe@example.com'), value=maintainers_value, error=errors.maintainer, classes=['control-full'], is_required=true, attrs=tag_attrs) }}
+{% endblock %}
