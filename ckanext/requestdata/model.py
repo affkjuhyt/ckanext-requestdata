@@ -117,7 +117,7 @@ class ckanextRequestdata(DomainObject):
         return query
 
     @classmethod
-    def search(self, order='modified_at desc', **kwds):
+    def search(self, order='', **kwds):
         '''Finds entities in the table that satisfy certain criteria.
         :param order: Order rows by specified column.
         :type order: string
@@ -125,11 +125,11 @@ class ckanextRequestdata(DomainObject):
 
         query = Session.query(self).autoflush(False)
         query = query.filter_by(**kwds)
-        query = query.order_by(order)
+        # query = query.order_by(order)
         return query.all()
 
     @classmethod
-    def search_by_maintainers(self, id, order='modified_at desc'):
+    def search_by_maintainers(self, id, order=''):
         '''Finds all of the requests for the specific maintainer
         :param id: User is
         :type id: string
@@ -141,7 +141,7 @@ class ckanextRequestdata(DomainObject):
                                   ckanextMaintainers.request_data_id,
                                   ckanextMaintainers.maintainer_id ==
                                   maintainer_id)\
-                          .order_by(order).all()
+                          .all()
 
         requests_data = []
         for r in requests:

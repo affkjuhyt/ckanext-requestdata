@@ -14,24 +14,24 @@ counters_validator = validators.request_counter_validator
 
 def request_create_schema():
     return {
-        'sender_name': [not_empty, unicode],
+        'sender_name': [not_empty],
         'email_address': [not_empty, email_validator],
-        'message_content': [not_empty, unicode],
+        'message_content': [not_empty],
         'package_id': [not_empty, package_id_exists]
     }
 
 
 def request_show_schema():
     return {
-        'id': [not_empty, unicode],
+        'id': [not_empty],
         'package_id': [not_empty, package_id_exists]
     }
 
 
 def request_patch_schema():
     return {
-        'id': [not_empty, unicode],
-        'package_id': [not_empty, package_id_exists, unicode],
+        'id': [not_empty],
+        'package_id': [not_empty, package_id_exists],
         'state': [state_validator],
         'data_shared': [boolean_validator],
         'rejected': [boolean_validator]
@@ -52,7 +52,7 @@ def notification_create_schema():
 
 def notification_change_schema():
     return{
-        'user_id': [not_empty, unicode]
+        'user_id': [not_empty]
     }
 
 

@@ -57,11 +57,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
     #                 controller=package_controller,
     #                 action='create_metadata_package')
 
-    #     map.connect('requestdata_my_requests',
-    #                 '/user/my_requested_data/{id}',
-    #                 controller=user_controller,
-    #                 action='my_requested_data', ckan_icon='list')
-
     #     map.connect('requestdata_handle_new_request_action',
     #                 '/user/my_requested_data/{username}/' +
     #                 '{request_action:reply|reject}',

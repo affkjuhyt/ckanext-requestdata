@@ -79,6 +79,7 @@ def get_notification():
       '''
 
     notification = _get_action('requestdata_notification_for_current_user', {})
+    print("notification: ", notification)
     return notification
 
 
@@ -156,6 +157,7 @@ def convert_str_to_json(data):
 
 
 def is_hdx_portal():
+    print("is hdx portal: ", config.get("hdx_portal"))
     return asbool(config.get('hdx_portal', False))
 
 

@@ -1,6 +1,6 @@
 {% extends "page.html" %}
 
-{% set my_requests_url = h.url_for('requestdata_my_requests', id=c.userobj.name) %}
+{% set my_requests_url = h.url_for('requestdata.my_requested_data', id=c.userobj.name) %}
 
 {% block breadcrumb_content %}
   <li>{% link_for _('Users'), controller='user', action='index' %}</li>
