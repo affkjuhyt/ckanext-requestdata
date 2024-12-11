@@ -1,15 +1,13 @@
 import ckan.plugins as plugins
-import ckan.plugins.toolkit as toolkit
+import ckan.plugins.toolkit as tk
 
-from ckanext.requestdata.model import setup as model_setup
-from ckanext.requestdata.logic import actions
-from ckanext.requestdata.logic import auth
 from ckanext.requestdata import helpers
-from ckanext.requestdata.logic import validators
+from ckanext.requestdata.model import setup as model_setup
+from ckanext.requestdata.logic import actions, auth, validators
 
 
-@toolkit.blanket.blueprints
-class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
+@tk.blanket.blueprints
+class RequestdataPlugin(plugins.SingletonPlugin, tk.DefaultDatasetForm):
     plugins.implements(plugins.IConfigurer)
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IActions)
@@ -21,12 +19,12 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
     # IConfigurer
 
     def update_config(self, config):
-        toolkit.add_template_directory(config, 'templates')
-        toolkit.add_public_directory(config, 'public')
-        toolkit.add_resource('assets', 'requestdata')
+        tk.add_template_directory(config, 'templates')
+        tk.add_public_directory(config, 'public')
+        tk.add_resource('assets', 'requestdata')
 
     def update_config_schema(self, schema):
-        ignore_missing = toolkit.get_validator('ignore_missing')
+        ignore_missing = tk.get_validator('ignore_missing')
 
         email_body = {}
         email_body.update({'email_header': [ignore_missing],
@@ -118,8 +116,8 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
     # IDatasetForm
 
     def _modify_package_schema(self, schema):
-        not_empty = toolkit.get_validator('not_empty')
-        convert_to_extras = toolkit.get_converter('convert_to_extras')
+        not_empty = tk.get_validator('not_empty')
+        convert_to_extras = tk.get_converter('convert_to_extras')
         members_in_org_validator = validators.members_in_org_validator
 
         schema.update({
@@ -143,8 +141,8 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
 
     def show_package_schema(self):
         schema = super(RequestdataPlugin, self).show_package_schema()
-        not_empty = toolkit.get_validator('not_empty')
-        convert_from_extras = toolkit.get_converter('convert_from_extras')
+        not_empty = tk.get_validator('not_empty')
+        convert_from_extras = tk.get_converter('convert_from_extras')
 
         schema.update({
             'maintainer': [not_empty, convert_from_extras]

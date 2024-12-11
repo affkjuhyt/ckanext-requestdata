@@ -2,17 +2,21 @@ import logging
 import json
 import unicodecsv as csv
 
+import ckan.lib.helpers as h
 import ckan.lib.navl.dictization_functions as dict_fns
+
+import ckan.model as model
+import ckan.plugins.toolkit as tk
+
 from ckanext.requestdata.emailer import send_email
 from paste.deploy.converters import asbool
-import ckan.plugins.toolkit as tk
-import ckan.model as model
 
-from ckan import logic, authz
-from ckan.lib import base
+from ckan import logic
 from ckan.common import c, _, request, config
+from ckan.lib import base
 from ckan.views.group import _get_group_dict, _setup_template_variables
 from ckan.views.admin import _get_sysadmins
+
 from flask import Blueprint, Response, redirect
 from flask import request as rq
 from ckanext.requestdata import emailer
@@ -20,7 +24,6 @@ from email_validator import validate_email
 
 from collections import Counter
 from ckanext.requestdata import helpers
-import ckan.lib.helpers as h
 from io import StringIO
 
 
@@ -67,7 +70,6 @@ def _get_email_configuration(
         pass
 
     for key in schema:
-        # get only email configuration
         if 'email_header' in key:
             email_header = config.get(key)
         elif 'email_body' in key:
@@ -180,16 +182,13 @@ def requested_data(group_type: str, id: str):
     except NotAuthorized:
         abort(403, _('Not authorized to see this page.'))
 
-    # group_type = self._ensure_controller_matches_group_type(id)
     context = {
         'model': model,
         'session': model.Session,
         'user': c.user
     }
-    print("group_type: ", group_type)
     is_organization = True if group_type == "organization" else False
     c.group_dict = _get_group_dict(id, is_organization)
-    logging.debug("c.group_dict: ", c.group_dict)
     group_type = c.group_dict['type']
     request_params = request.params.to_dict(flat=False)
     filtered_maintainers = []
@@ -404,7 +403,6 @@ def my_requested_data(id: str):
         abort(403, _('Not authorized to see this page.'))
 
     order_by = request.query_string
-    logging.debug("order_by: ", order_by)
     requests_new = []
     requests_open = []
     requests_archive = []
@@ -1115,7 +1113,7 @@ def handle_new_request_action(username, request_action):
 
     '''
 
-    data = dict(tk.request.POST)
+    data = _parse_form_data(tk.request)
 
     if request_action == 'reply':
         reply_email = data.get('email')

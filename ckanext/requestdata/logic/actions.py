@@ -1,6 +1,6 @@
 import datetime
 
-from ckan.plugins import toolkit
+from ckan.plugins import toolkit as tk
 from ckan.logic import check_access, NotFound
 import ckan.lib.navl.dictization_functions as df
 from ckan.model.user import User
@@ -39,7 +39,7 @@ def request_create(context, data_dict):
                                context)
 
     if errors:
-        raise toolkit.ValidationError(errors)
+        raise tk.ValidationError(errors)
 
     sender_name = data.get('sender_name')
     organization = data.get('organization')
@@ -47,7 +47,7 @@ def request_create(context, data_dict):
     message_content = data.get('message_content')
     package_id = data.get('package_id')
 
-    package = toolkit.get_action('package_show')(context, {'id': package_id})
+    package = tk.get_action('package_show')(context, {'id': package_id})
 
     sender_user_id = User.get(context['user']).id
 
@@ -70,7 +70,7 @@ def request_create(context, data_dict):
     for id in maintainers:
         try:
             if is_hdx:
-                main_ids = toolkit.get_action('user_show')(context, {'id': id})
+                main_ids = tk.get_action('user_show')(context, {'id': id})
                 user = User.get(main_ids['id'])
             else:
                 user = User.get(id)
@@ -87,7 +87,7 @@ def request_create(context, data_dict):
     return out
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_show(context, data_dict):
     '''Return the metadata of a requestdata.
 
@@ -102,7 +102,7 @@ def request_show(context, data_dict):
                                context)
 
     if errors:
-        raise toolkit.ValidationError(errors)
+        raise tk.ValidationError(errors)
 
     check_access('requestdata_request_show', context, data_dict)
 
@@ -118,7 +118,7 @@ def request_show(context, data_dict):
     return out
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_list_for_sysadmin(context, data_dict):
     '''Returns a list of all requests.
 
@@ -139,7 +139,7 @@ def request_list_for_sysadmin(context, data_dict):
     return out
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_list_for_organization(context, data_dict):
     '''Returns a list of requests for specified organization.
 
@@ -155,20 +155,20 @@ def request_list_for_organization(context, data_dict):
                                context)
 
     if errors:
-        raise toolkit.ValidationError(errors)
+        raise tk.ValidationError(errors)
 
     check_access('requestdata_request_list_for_organization',
                  context, data_dict)
 
     org_id = data.get('org_id')
-    org = toolkit.get_action('organization_show')(context, {'id': org_id})
+    org = tk.get_action('organization_show')(context, {'id': org_id})
 
     data_dict = {
         'fq': 'organization:' + org['name'],
         'rows': 1000000
     }
 
-    packages = toolkit.get_action('package_search')(context, data_dict)
+    packages = tk.get_action('package_search')(context, data_dict)
     total_requests = []
     for package in packages['results']:
         data = {
@@ -181,7 +181,7 @@ def request_list_for_organization(context, data_dict):
     return total_requests
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_list_for_current_user(context, data_dict):
     '''Returns a list of requests.
 
@@ -230,7 +230,7 @@ def request_patch(context, data_dict):
     data, errors = df.validate(data_dict, request_patch_schema, context)
 
     if errors:
-        raise toolkit.ValidationError(errors)
+        raise tk.ValidationError(errors)
 
     check_access('requestdata_request_patch', context, data_dict)
 
@@ -302,7 +302,7 @@ def notification_create(context, data_dict):
     return notifications
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def notification_for_current_user(context, data_dict):
     '''Returns a notification for logged in user
 
@@ -321,7 +321,7 @@ def notification_for_current_user(context, data_dict):
         return is_notified
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def notification_change(context, data_dict):
     '''
         Change the notification status to seen
@@ -337,7 +337,7 @@ def notification_change(context, data_dict):
                                schema.notification_change_schema(),
                                context)
     if errors:
-        raise toolkit.ValidationError(errors)
+        raise tk.ValidationError(errors)
 
     user_id = data.get('user_id')
     notification = ckanextUserNotification.get(package_maintainer_id=user_id)
@@ -363,11 +363,11 @@ def increment_request_data_counters(context, data_dict):
                                schema.increment_request_counters_schema(),
                                context)
     if errors:
-        raise toolkit.ValidationError(errors)
+        raise tk.ValidationError(errors)
 
     flag = data.get('flag')
     package_id = data.get('package_id')
-    package = toolkit.get_action('package_show')(context, {'id': package_id})
+    package = tk.get_action('package_show')(context, {'id': package_id})
     data = {
         'package_id': package_id,
         'org_id': package['owner_org']
@@ -396,7 +396,7 @@ def increment_request_data_counters(context, data_dict):
         return data_request
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_data_counters_get(context, data_dict):
     '''
         Returns a counters for particular request data
@@ -411,7 +411,7 @@ def request_data_counters_get(context, data_dict):
     return counters
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_data_counters_get_all(context, data_dict):
     '''
         Returns a counters for particular request data
@@ -425,7 +425,7 @@ def request_data_counters_get_all(context, data_dict):
     return counters
 
 
-@toolkit.side_effect_free
+@tk.side_effect_free
 def request_data_counters_get_by_org(context, data_dict):
     '''
         Return counters for requests that belong to particular organization

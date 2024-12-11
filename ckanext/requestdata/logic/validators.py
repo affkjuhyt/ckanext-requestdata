@@ -1,8 +1,7 @@
 from email_validator import validate_email
 from paste.deploy.converters import asbool
 
-from ckan.plugins.toolkit import _
-from ckan.plugins.toolkit import get_action
+from ckan.plugins.toolkit import _, get_action
 
 
 def email_validator(key, data, errors, context):
@@ -42,8 +41,6 @@ def members_in_org_validator(key, data, errors, context):
 
     members_in_org = get_action('member_list')(context, data_dict)
 
-    # member_list returns more than just users, so we need to extract only
-    # users
     members_in_org = [member for member in members_in_org
                       if member[1] == 'user']
 

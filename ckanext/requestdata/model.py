@@ -1,10 +1,9 @@
 import logging
 import datetime
 
-from sqlalchemy import Table, Column, Index, ForeignKey
-from sqlalchemy import types, func, create_engine
-
+from sqlalchemy import Table, Column, Index, ForeignKey, types, func, create_engine
 from sqlalchemy.engine.reflection import Inspector
+
 from ckan.model.meta import metadata, mapper, Session
 from ckan.model.types import make_uuid
 from ckan.model.domain_object import DomainObject
@@ -20,7 +19,6 @@ engine = create_engine("postgresql://ckan_default:123456@localhost/ckan_default"
 
 
 def setup():
-    print("Setup model request data")
     log.debug(f"Engine URL: {engine}")
     log.debug(f"Metadata Bound: {metadata}")
     metadata.bind = engine
@@ -29,13 +27,10 @@ def setup():
         define_request_data_table()
         log.debug('Requestdata table defined in memory.')
 
-    print("-AAAAAAAAAAAAAAAAAAAAAA-")
     if not request_data_table.exists():
         request_data_table.create()
     else:
         log.debug('Requestdata table already exists.')
-    print("---------------------")
-    print("engine: ", engine)
     inspector = Inspector.from_engine(engine)
 
     index_names =\
@@ -167,8 +162,6 @@ class ckanextRequestdata(DomainObject):
 
 def define_request_data_table():
     global request_data_table
-
-    print("Define request data table")
 
     request_data_table = Table('ckanext_requestdata_requests', metadata,
                                Column('id', types.UnicodeText,

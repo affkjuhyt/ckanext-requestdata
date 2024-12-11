@@ -1,26 +1,34 @@
-from ckan.plugins.toolkit import _
-from ckan.plugins.toolkit import get_action
+from ckan.plugins.toolkit import _, get_action
 from ckan import logic
 
 
 def request_create(context, data_dict):
-    user = context['user']
+    """
+    Handles data request creation.
 
-    if user:
-        return {'success': True}
-    else:
-        message = _('Only registered users can request data.')
-
-        return {'success': False, 'msg': message}
+    :param context: Context dictionary containing user and session details.
+    :param data_dict: Dictionary of input data for the request.
+    :return: Dictionary indicating success status and optional message.
+    """
+    return {
+        'success': bool(context.get('user')),
+        'msg': None if context.get('user') else _('Only registered users can request data.')
+    }
 
 
 def request_show(context, data_dict):
-    if _user_has_access_to_request(context, data_dict):
-        return {'success': True}
-    else:
-        message = _('You don\'t have access to this request data.')
+    """
+    Handles access verification for request data.
 
-        return {'success': False, 'msg': message}
+    :param context: Context dictionary containing user and session details.
+    :param data_dict: Dictionary of input data for the request.
+    :return: Dictionary indicating success status and optional message.
+    """
+    has_access = _user_has_access_to_request(context, data_dict)
+    return {
+        'success': has_access,
+        'msg': None if has_access else _('You don\'t have access to this request data.')
+    }
 
 
 def request_list_for_current_user(context, data_dict):
@@ -29,65 +37,51 @@ def request_list_for_current_user(context, data_dict):
 
 def request_list_for_organization(context, data_dict):
     current_user_id = context['auth_user_obj'].id
-
-    payload = {'id': data_dict['org_id']}
+    org_id = data_dict.get("org_id")
 
     try:
-        organization = get_action('organization_show')(context, payload)
+        organization = get_action('organization_show')(context, {'id': org_id})
     except logic.NotFound:
         raise logic.ValidationError('Organization not found.')
 
-    for user in organization['users']:
-
-        # Checks whether the current logged in user is admin on the
-        # organization
-        if user['id'] == current_user_id and user['capacity'] == 'admin':
-            return {'success': True}
-
-    return {'success': False}
+    is_admin = any(
+        user['id'] == current_user_id and user['capacity'] == 'admin'
+        for user in organization.get('users', [])
+    )
+    
+    return {'success': is_admin}
 
 
 def request_patch(context, data_dict):
     if _user_has_access_to_request(context, data_dict):
         return {'success': True}
-    else:
-        message = _('You don\'t have access to this request data.')
-
-        return {'success': False, 'msg': message}
+    
+    return {
+        'success': False,
+        'msg': _('You don\'t have access to this request data.')
+    }
 
 
 def request_list_for_sysadmin(context, data_dict):
     model = context['model']
     user = model.User.get(context['user'])
-    is_sysadmin = user.sysadmin
 
-    if is_sysadmin:
+    if user.sysadmin:
         return {'success': True}
-    else:
-        message = _('You don\'t have access to this request data.')
 
-        return {'success': False, 'msg': message}
+    return {'success': False, 'msg': _('You don\'t have access to this request data.')}
 
 
 def _user_has_access_to_request(context, data_dict):
     current_user_id = context['auth_user_obj'].id
 
-    payload = {'id': data_dict['package_id']}
-    package = get_action('package_show')(context, payload)
-    creator_user_id = package['creator_user_id']
+    package = get_action('package_show')(context, {'id': data_dict['package_id']})
 
-    # Checks whether the current logged in user is the creator of the package
-    if current_user_id == creator_user_id:
+    if current_user_id == package['creator_user_id']:
         return True
-    else:
-        payload = {'id': package['owner_org']}
-        organization = get_action('organization_show')(context, payload)
-
-        for user in organization['users']:
-
-            # Checks whether the current logged in user is admin on the
-            # organization that the package belongs to
-            if user['id'] == current_user_id and user['capacity'] == 'admin':
-                return True
-
-    return False
+    
+    organization = get_action('organization_show')(context, {'id': package['owner_org']})
+    return any(
+        user['id'] == current_user_id and user['capacity'] == 'admin'
+        for user in organization['users']
+    )

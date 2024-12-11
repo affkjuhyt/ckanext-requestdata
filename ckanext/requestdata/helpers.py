@@ -1,15 +1,15 @@
+import json
 import timeago
 import datetime
 import itertools
-from operator import itemgetter
-import json
 
+from operator import itemgetter
 from paste.deploy.converters import asbool
 
 from ckan import model, logic
 from ckan.common import c, _, request
 from ckan.lib import base
-from ckan.plugins import toolkit
+from ckan.plugins import toolkit as tk
 from ckan.model.user import User
 
 try:
@@ -34,7 +34,7 @@ def _get_context():
 
 
 def _get_action(action, data_dict):
-    return toolkit.get_action(action)(_get_context(), data_dict)
+    return tk.get_action(action)(_get_context(), data_dict)
 
 
 def time_ago_from_datetime(date):
@@ -79,7 +79,6 @@ def get_notification():
       '''
 
     notification = _get_action('requestdata_notification_for_current_user', {})
-    print("notification: ", notification)
     return notification
 
 
@@ -139,8 +138,6 @@ def group_archived_requests_by_dataset(requests):
 
 
 def has_query_param(param):
-    # Checks if the provided parameter is part of the current URL query params
-
     params = dict(request.params)
 
     if param in params:
@@ -157,7 +154,6 @@ def convert_str_to_json(data):
 
 
 def is_hdx_portal():
-    print("is hdx portal: ", config.get("hdx_portal"))
     return asbool(config.get('hdx_portal', False))
 
 

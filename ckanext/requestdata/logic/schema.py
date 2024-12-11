@@ -1,11 +1,11 @@
-from ckan.plugins import toolkit
+from ckan.plugins import toolkit as tk
 
 from ckanext.requestdata.logic import validators
 
 
-not_missing = toolkit.get_validator('not_missing')
-not_empty = toolkit.get_validator('not_empty')
-package_id_exists = toolkit.get_validator('package_id_exists')
+not_missing = tk.get_validator('not_missing')
+not_empty = tk.get_validator('not_empty')
+package_id_exists = tk.get_validator('package_id_exists')
 email_validator = validators.email_validator
 state_validator = validators.state_validator
 boolean_validator = validators.boolean_validator
