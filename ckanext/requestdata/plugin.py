@@ -37,50 +37,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
 
         return schema
 
-    # IRoutes
-
-    # def before_map(self, map):
-    #     print("before map")
-
-    #     package_controller =\
-    #         'ckanext.requestdata.controllers.package:PackageController'
-    #     user_controller =\
-    #         'ckanext.requestdata.controllers.user:UserController'
-    #     request_data_controller = 'ckanext.requestdata.controllers.'\
-    #         'request_data:RequestDataController'
-    #     admin_controller = \
-    #         'ckanext.requestdata.controllers.admin:AdminController'
-    #     search_controller =\
-    #         'ckanext.requestdata.controllers.search:SearchController'
-
-    #     map.connect('/dataset/new',
-    #                 controller=package_controller,
-    #                 action='create_metadata_package')
-
-    #     map.connect('requestdata_handle_new_request_action',
-    #                 '/user/my_requested_data/{username}/' +
-    #                 '{request_action:reply|reject}',
-    #                 controller=user_controller,
-    #                 action='handle_new_request_action')
-
-    #     map.connect('requestdata_handle_open_request_action',
-    #                 '/user/my_requested_data/{username}/' +
-    #                 '{request_action:shared|notshared}',
-    #                 controller=user_controller,
-    #                 action='handle_open_request_action')
-
-    #     map.connect('requestdata_send_request', '/request_data',
-    #                 controller=request_data_controller,
-    #                 action='send_request')
-
-    #     map.connect('simple_search', '/dataset', controller=search_controller,
-    #                 action='search_datasets')
-
-    #     map.connect('search', '/search', controller=search_controller,
-    #                 action='search_datasets')
-
-    #     return map
-
     # IConfigurable
 
     def configure(self, config):

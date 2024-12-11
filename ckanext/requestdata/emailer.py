@@ -4,10 +4,10 @@ import cgi
 from socket import error as socket_error
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email import Encoders
+from email.mime.base import MIMEBase
+from email import encoders
 from smtplib import SMTPRecipientsRefused
-from pylons import config
+from ckan.common import config
 
 
 log = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def send_email(content, to, subject, file=None):
     if isinstance(file, cgi.FieldStorage):
         part = MIMEBase('application', 'octet-stream')
         part.set_payload(file.file.read())
-        Encoders.encode_base64(part)
+        encoders.encode_base64(part)
 
         extension = file.filename.split('.')[-1]
 

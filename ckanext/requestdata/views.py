@@ -2,6 +2,9 @@ import logging
 import json
 import unicodecsv as csv
 
+import ckan.lib.navl.dictization_functions as dict_fns
+from ckanext.requestdata.emailer import send_email
+from paste.deploy.converters import asbool
 import ckan.plugins.toolkit as tk
 import ckan.model as model
 
@@ -9,7 +12,11 @@ from ckan import logic, authz
 from ckan.lib import base
 from ckan.common import c, _, request, config
 from ckan.views.group import _get_group_dict, _setup_template_variables
-from flask import Blueprint, Response
+from ckan.views.admin import _get_sysadmins
+from flask import Blueprint, Response, redirect
+from flask import request as rq
+from ckanext.requestdata import emailer
+from email_validator import validate_email
 
 from collections import Counter
 from ckanext.requestdata import helpers
@@ -24,6 +31,9 @@ get_action = logic.get_action
 NotFound = logic.NotFound
 NotAuthorized = logic.NotAuthorized
 ValidationError = logic.ValidationError
+clean_dict = logic.clean_dict
+tuplize_dict = logic.tuplize_dict
+parse_params = logic.parse_params
 
 abort = base.abort
 render = base.render
@@ -41,18 +51,118 @@ def _get_action(action, data_dict):
     return tk.get_action(action)(_get_context(), data_dict)
 
 
-# def _setup_template_variables(context, data_dict):
-#         c.is_sysadmin = authz.is_sysadmin(c.user)
-#         try:
-#             user_dict = get_action('user_show')(context, data_dict)
-#         except NotFound:
-#             abort(404, _('User not found'))
-#         except NotAuthorized:
-#             abort(403, _('Not authorized to see this page'))
+def _get_email_configuration(
+        user_name, data_owner, dataset_name, email, message, organization,
+        data_maintainers, only_org_admins=False):
+    schema = logic.schema.update_configuration_schema()
+    avaiable_terms = ['{name}', '{data_maintainers}', '{dataset}',
+                      '{organization}', '{message}', '{email}']
+    new_terms = [user_name, data_maintainers, dataset_name, organization,
+                 message, email]
 
-#         c.user_dict = user_dict
-#         c.about_formatted = h.render_markdown(user_dict['about'])
- 
+    try:
+        is_user_sysadmin = \
+            _get_action('user_show', {'id': c.user}).get('sysadmin')
+    except NotFound:
+        pass
+
+    for key in schema:
+        # get only email configuration
+        if 'email_header' in key:
+            email_header = config.get(key)
+        elif 'email_body' in key:
+            email_body = config.get(key)
+        elif 'email_footer' in key:
+            email_footer = config.get(key)
+    if '{message}' not in email_body and not email_body and not email_footer:
+        email_body += message
+        return email_body
+    for i in range(0, len(avaiable_terms)):
+        if avaiable_terms[i] == '{dataset}' and new_terms[i]:
+            url = tk.url_for(
+                                    controller='package',
+                                    action='read',
+                                    id=new_terms[i], qualified=True)
+            new_terms[i] = '<a href="' + url + '">' + new_terms[i] + '</a>'
+        elif avaiable_terms[i] == '{organization}' and is_user_sysadmin:
+            new_terms[i] = config.get('ckan.site_title')
+        elif avaiable_terms[i] == '{data_maintainers}':
+            if len(new_terms[i]) == 1:
+                new_terms[i] = new_terms[i][0]
+            else:
+                maintainers = ''
+                for j, term in enumerate(new_terms[i][:]):
+                    maintainers += term
+
+                    if j == len(new_terms[i]) - 2:
+                        maintainers += ' and '
+                    elif j < len(new_terms[i]) - 1:
+                        maintainers += ', '
+
+                new_terms[i] = maintainers
+
+        email_header = email_header.replace(avaiable_terms[i], new_terms[i])
+        email_body = email_body.replace(avaiable_terms[i], new_terms[i])
+        email_footer = email_footer.replace(avaiable_terms[i], new_terms[i])
+
+    if only_org_admins:
+        owner_org = _get_action('package_show',
+                                {'id': dataset_name}).get('owner_org')
+        url = tk.url_for('requestdata_organization_requests',
+                              id=owner_org, qualified=True)
+        email_body += '<br><br> This dataset\'s maintainer does not exist.\
+         Go to your organisation\'s <a href="' + url + '">Requested Data</a>\
+          page to see the new request. Please also edit the dataset and assign\
+           a new maintainer.'
+    else:
+        url = \
+            tk.url_for('requestdata_my_requests',
+                            id=data_owner, qualified=True)
+        email_body += '<br><br><strong> Please accept or decline the request\
+         as soon as you can by visiting the \
+         <a href="' + url + '">My Requests</a> page.</strong>'
+
+    organizations =\
+        _get_action('organization_list_for_user', {'id': data_owner})
+
+    package = _get_action('package_show', {'id': dataset_name})
+
+    if not only_org_admins:
+        for org in organizations:
+            if org['name'] in organization\
+                    and package['owner_org'] == org['id']:
+                url = \
+                    tk.url_for('requestdata_organization_requests',
+                                    id=org['name'], qualified=True)
+                email_body += '<br><br> Go to <a href="' + url + '">\
+                              Requested data</a> page in organization admin.'
+
+    site_url = config.get('ckan.site_url')
+    site_title = config.get('ckan.site_title')
+    newsletter_url = config.get('ckanext.requestdata.newsletter_url', site_url)
+    twitter_url = \
+        config.get('ckanext.requestdata.twitter_url', 'https://twitter.com')
+    contact_email = config.get('ckanext.requestdata.contact_email', '')
+
+    email_footer += """
+        <br/><br/>
+        <small>
+          <p>
+            <a href=" """ + site_url + """ ">""" + site_title + """</a>
+          </p>
+          <p>
+            <a href=" """ + newsletter_url + """ ">\
+            Sign up for our newsletter</a> | \
+            <a href=" """ + twitter_url + """ ">Follow us on Twitter</a>\
+             | <a href="mailto:""" + contact_email + """ ">Contact us</a>
+          </p>
+        </small>
+
+    """
+
+    result = email_header + '<br><br>' + email_body + '<br><br>' + email_footer
+
+    return result
 
 
 @bp.route("/<group_type>/requested_data/<id>")
@@ -767,3 +877,372 @@ def download_requests_data():
         status=400,
         mimetype='text/plain'
     )
+
+
+def _org_admins_for_dataset(self, dataset_name):
+    package = _get_action('package_show', {'id': dataset_name})
+    owner_org = package['owner_org']
+    admins = []
+
+    org = _get_action('organization_show', {'id': owner_org})
+
+    for user in org['users']:
+        if user['capacity'] == 'admin':
+            db_user = model.User.get(user['id'])
+            data = {
+                'email': db_user.email,
+                'fullname': db_user.fullname or db_user.name
+            }
+            admins.append(data)
+
+    return admins
+
+
+@bp.route("/dataset/new", methods=["GET", "POST"])
+def create_metadata_package():
+    """
+    Handles the creation of a new metadata package.
+    """
+    # if helpers.has_query_param('metadata'):
+    package_type = 'requestdata-metadata-only'
+    form_vars = {
+        'errors': {},
+        'dataset_type': package_type,
+        'action': 'new',
+        'error_summary': {},
+        'data': {
+            'tag_string': '',
+            'group_id': None,
+            'type': package_type
+        },
+        'stage': ['active']
+    }
+
+    # if tk.request.method == 'POST':
+    context = {'model': model, 'session': model.Session,
+            'user': c.user, 'auth_user_obj': c.userobj}
+
+    data_dict = clean_dict(dict_fns.unflatten(
+        tuplize_dict(parse_params(rq.form))))
+    data_dict['type'] = package_type
+
+    try:
+        package = get_action('package_create')(context, data_dict)
+
+        url = h.url_for(controller='dataset', action='read',
+                        id=package['name'])
+
+        return redirect(url)
+    except NotAuthorized:
+        abort(403, _('Unauthorized to create a dataset.'))
+    except ValidationError as e:
+        errors = e.error_dict
+        error_summary = e.error_summary
+
+        form_vars = {
+            'errors': errors,
+            'dataset_type': package_type,
+            'action': 'new',
+            'error_summary': error_summary,
+            'stage': ['active']
+        }
+
+        form_vars['data'] = data_dict
+
+        extra_vars = {
+            'form_vars': form_vars,
+            'form_snippet': 'package/new_package_form.html',
+            'dataset_type': package_type
+        }
+
+        return tk.render('package/new.html',
+                            extra_vars=extra_vars)
+    
+
+@bp.route("/request_data")
+def send_request():
+    '''Send mail to resource owner.
+
+    :param data: Contact form data.
+    :type data: object
+
+    :rtype: json
+    '''
+    context = {'model': model, 'session': model.Session,
+                   'user': c.user, 'auth_user_obj': c.userobj}
+    try:
+        if tk.request.method == 'POST':
+            data = dict(tk.request.POST)
+            _get_action('requestdata_request_create', data)
+    except NotAuthorized:
+        abort(403, _('Unauthorized to update this dataset.'))
+    except ValidationError as e:
+        error = {
+            'success': False,
+            'error': {
+                'fields': e.error_dict
+            }
+        }
+
+        return json.dumps(error)
+
+    data_dict = {'id': data['package_id']}
+    package = _get_action('package_show', data_dict)
+    sender_name = data.get('sender_name', '')
+    user_obj = context['auth_user_obj']
+    data_dict = {
+        'id': user_obj.id,
+        'permission': 'read'
+    }
+
+    organizations = _get_action('organization_list_for_user', data_dict)
+
+    orgs = []
+    for i in organizations:
+            orgs.append(i['display_name'])
+    org = ','.join(orgs)
+    dataset_name = package['name']
+    dataset_title = package['title']
+    email = user_obj.email
+    message = data['message_content']
+    creator_user_id = package['creator_user_id']
+    data_owner =\
+        _get_action('user_show', {'id': creator_user_id}).get('name')
+    if len(_get_sysadmins()) > 0:
+        sysadmin = _get_sysadmins()[0].name
+        context_sysadmin = {
+            'model': model,
+            'session': model.Session,
+            'user': sysadmin,
+            'auth_user_obj': c.userobj
+        }
+        to = package['maintainer']
+        if to is None:
+            message = {
+                'success': False,
+                'error': {
+                    'fields': {
+                        'email': 'Dataset maintainer email not found.'
+                    }
+                }
+            }
+
+            return json.dumps(message)
+        maintainers = to.split(',')
+        data_dict = {
+            'users': []
+        }
+        users_email = []
+        only_org_admins = False
+        data_maintainers = []
+        # Get users objects from maintainers list
+        for id in maintainers:
+            try:
+                user =\
+                    tk.get_action('user_show')(context_sysadmin,
+                                                    {'id': id})
+                data_dict['users'].append(user)
+                users_email.append(user['email'])
+                data_maintainers.append(user['fullname'] or user['name'])
+            except NotFound:
+                pass
+        mail_subject =\
+            config.get('ckan.site_title') + ': New data request "'\
+                                            + dataset_title + '"'
+
+        if len(users_email) == 0:
+            admins = _org_admins_for_dataset(dataset_name)
+
+            for admin in admins:
+                users_email.append(admin.get('email'))
+                data_maintainers.append(admin.get('fullname'))
+            only_org_admins = True
+
+        content = _get_email_configuration(
+            sender_name, data_owner, dataset_name, email,
+            message, org, data_maintainers,
+            only_org_admins=only_org_admins)
+
+        response_message = \
+            emailer.send_email(content, users_email, mail_subject)
+
+        # notify package creator that new data request was made
+        _get_action('requestdata_notification_create', data_dict)
+        data_dict = {
+            'package_id': data['package_id'],
+            'flag': 'request'
+        }
+
+        action_name = 'requestdata_increment_request_data_counters'
+        _get_action(action_name, data_dict)
+
+        return json.dumps(response_message)
+    else:
+        message = {
+            'success': True,
+            'message': 'Request sent, but email message was not sent.'
+        }
+
+        return json.dumps(message)
+
+
+@bp.route('/user/my_requested_data/<username>/<request_action>', methods=['GET', 'POST'])
+def handle_new_request_action(username, request_action):
+    '''Handles sending email to the person who created the request, as well
+    as updating the state of the request depending on the data sent.
+
+    :param username: The user's name.
+    :type username: string
+
+    :param request_action: The current action. Can be either reply or
+    reject
+    :type request_action: string
+
+    :rtype: json
+
+    '''
+
+    data = dict(tk.request.POST)
+
+    if request_action == 'reply':
+        reply_email = data.get('email')
+
+        try:
+            validate_email(reply_email)
+        except Exception:
+            error = {
+                'success': False,
+                'error': {
+                    'fields': {
+                        'email': 'The email you provided is invalid.'
+                    }
+                }
+            }
+
+            return json.dumps(error)
+
+    counters_data_dict = {
+        'package_id': data['package_id'],
+        'flag': ''
+    }
+    if 'rejected' in data:
+        data['rejected'] = asbool(data['rejected'])
+        counters_data_dict['flag'] = 'declined'
+    elif 'data_shared' in data:
+        counters_data_dict['flag'] = 'shared and replied'
+    else:
+        counters_data_dict['flag'] = 'replied'
+
+    message_content = data.get('message_content')
+
+    if message_content is None or message_content == '':
+        payload = {
+            'success': False,
+            'error': {
+                'message_content': 'Missing value'
+            }
+        }
+
+        return json.dumps(payload)
+
+    try:
+        _get_action('requestdata_request_patch', data)
+    except NotAuthorized:
+        abort(403, _('Not authorized to use this action.'))
+    except ValidationError as e:
+        error = {
+            'success': False,
+            'error': {
+                'fields': e.error_dict
+            }
+        }
+
+        return json.dumps(error)
+
+    to = data['send_to']
+
+    subject = config.get('ckan.site_title') + ': Data request ' +\
+        request_action
+
+    file = data.get('file_upload')
+
+    if request_action == 'reply':
+        message_content += '<br><br> You can contact the maintainer on '\
+            'this email address: ' + reply_email
+
+    response = send_email(message_content, to, subject, file=file)
+
+    if response['success'] is False:
+        error = {
+            'success': False,
+            'error': {
+                'fields': {
+                    'email': response['message']
+                }
+            }
+        }
+
+        return json.dumps(error)
+
+    success = {
+        'success': True,
+        'message': 'Message was sent successfully'
+    }
+
+    action_name = 'requestdata_increment_request_data_counters'
+    _get_action(action_name, counters_data_dict)
+
+    return json.dumps(success)
+
+
+@bp.route('/user/my_requested_data/<username>/<request_action>', methods=['GET', 'POST'])
+def handle_open_request_action(username, request_action):
+    '''Handles updating the state of the request depending on the data
+        sent.
+
+    :param username: The user's name.
+    :type username: string
+
+    :param request_action: The current action. Can be either shared or
+    notshared
+    :type request_action: string
+
+    :rtype: json
+
+    '''
+
+    data = dict(tk.request.POST)
+    if 'data_shared' in data:
+        data['data_shared'] = asbool(data['data_shared'])
+    data_dict = {
+        'package_id': data['package_id'],
+        'flag': ''
+    }
+    if data['data_shared']:
+        data_dict['flag'] = 'shared'
+    else:
+        data_dict['flag'] = 'declined'
+
+    action_name = 'requestdata_increment_request_data_counters'
+    _get_action(action_name, data_dict)
+
+    try:
+        _get_action('requestdata_request_patch', data)
+    except NotAuthorized:
+        abort(403, _('Not authorized to use this action.'))
+    except ValidationError as e:
+        error = {
+            'success': False,
+            'error': {
+                'fields': e.error_dict
+            }
+        }
+
+        return json.dumps(error)
+
+    success = {
+        'success': True,
+        'message': 'Request\'s state successfully updated.'
+    }
+
+    return json.dumps(success)
