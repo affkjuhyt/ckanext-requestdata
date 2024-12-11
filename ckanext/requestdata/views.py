@@ -958,8 +958,17 @@ def create_metadata_package():
         return tk.render('package/new.html',
                             extra_vars=extra_vars)
     
+def _parse_form_data(request):
+    return logic.clean_dict(
+        dict_fns.unflatten(
+            logic.tuplize_dict(
+                logic.parse_params(request.form)
+            )
+        )
+    )
+    
 
-@bp.route("/request_data")
+@bp.route("/request_data", methods=["POST"])
 def send_request():
     '''Send mail to resource owner.
 
@@ -972,7 +981,9 @@ def send_request():
                    'user': c.user, 'auth_user_obj': c.userobj}
     try:
         if tk.request.method == 'POST':
-            data = dict(tk.request.POST)
+            print("go here")
+            data = _parse_form_data(tk.request)
+            print("data: ", data)
             _get_action('requestdata_request_create', data)
     except NotAuthorized:
         abort(403, _('Unauthorized to update this dataset.'))
@@ -1008,8 +1019,8 @@ def send_request():
     creator_user_id = package['creator_user_id']
     data_owner =\
         _get_action('user_show', {'id': creator_user_id}).get('name')
-    if len(_get_sysadmins()) > 0:
-        sysadmin = _get_sysadmins()[0].name
+    if _get_sysadmins().count() > 0:
+        sysadmin = _get_sysadmins().first().name
         context_sysadmin = {
             'model': model,
             'session': model.Session,
@@ -1063,10 +1074,12 @@ def send_request():
             message, org, data_maintainers,
             only_org_admins=only_org_admins)
 
+        print("send email............")
         response_message = \
             emailer.send_email(content, users_email, mail_subject)
 
         # notify package creator that new data request was made
+        print("send sucessfully...................")
         _get_action('requestdata_notification_create', data_dict)
         data_dict = {
             'package_id': data['package_id'],

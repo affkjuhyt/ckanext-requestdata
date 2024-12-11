@@ -2,6 +2,7 @@
 
 {% block styles %}
   {{ super() }}
-{% endblock %}
 
-<script src="{{ resource_url('requestdata/css/main.css') }}"></script>
+  {% asset 'requestdata/main-css' %}
+  {% asset 'requestdata/main-js' %}
+{% endblock %}

@@ -1,6 +1,7 @@
 {% import 'macros/form.html' as form %}
 
 {% ckan_extends %}
+
 <section id="dataset-resources" class="resources">
   <h3 class="uppercase">{{ _('Data and Resources') }}</h3>
     <div class="requested-data-message"></div>
@@ -15,29 +16,29 @@
       </ul>
     {% else %}
       {% if c.userobj %}
-       {% set is_logged_in = 'true' %}
+      {% set is_logged_in = 'true' %}
       {% else %}
-       {% set is_logged_in = 'false' %}
+      {% set is_logged_in = 'false' %}
       {% endif %}
       {% set is_hdx = h.requestdata_is_hdx_portal() %}
       {% set redirect_url = h.url_for(controller='user', action='login') %}
-      {% set requestdata_action = h.url_for('requestdata.send_request') %}
+      {% set requestdata_action = h.url_for(controller='requestdata', action='send_request') %}
       {% set request_post_data = h.dump_json({'package_id':pkg.id, 'package_name': pkg.name, 'package_title':pkg.title}) %}
       {% set is_current_user_a_maintainer = h.requestdata_is_current_user_a_maintainer(pkg.maintainer) %}
 
-      {% trans url=h.url_for(controller='requestdata', action='send_request', id=pkg.name) %}
-        <p class="empty">The metadata is available for this dataset. To access the full dataset, please request data.</p>
-        <a class="btn pull-right" style="margin-top: 10px;"
-           data-module="modal-form"
-           data-module-template_file="request_contact.html"
-           data-module-submit_action="{{ requestdata_action }}"
-           data-module-post_data="{{ request_post_data }}"
-           data-module-is_logged_in="{{ is_logged_in }}"
-           data-module-is_hdx="{{ is_hdx }}"
-           data-module-redirect_url="{{ redirect_url }}"
-           data-module-is_current_user_a_maintainer="{{ is_current_user_a_maintainer }}"
-        >Request data</a>
-      {% endtrans %}
+      {{ super() }}
+      {% asset 'requestdata/main-js' %}
+      <p class="empty">The metadata is available for this dataset. To access the full dataset, please request data.</p>
+      <button href="#" class="btn pull-right" style="margin-top: 10px; background-color: blue; color: white; margin-bottom: 4px;"
+          data-module="modal-form"
+          data-module-template_file="request_contact.html"
+          data-module-submit_action="{{ requestdata_action }}"
+          data-module-post_data="{{ request_post_data }}"
+          data-module-is_logged_in="{{ is_logged_in }}"
+          data-module-is_hdx="{{ is_hdx }}"
+          data-module-redirect_url="{{ redirect_url }}"
+          data-module-is_current_user_a_maintainer="{{ is_current_user_a_maintainer }}"
+      >Request data</a>
     {% endif %}
     {% if pkg.type == 'hdx-requestdata-metadata-only' %}
       <div class="container-subpanel">
@@ -53,5 +54,3 @@
 
     {% endblock %}
 </section>
-
-<script src="{{ resource_url('requestdata/modal-form.js') }}"></script>

@@ -20,10 +20,10 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
 
     # IConfigurer
 
-    def update_config(self, config_):
-        toolkit.add_template_directory(config_, 'templates')
-        toolkit.add_public_directory(config_, 'public')
-        toolkit.add_resource('fanstatic', 'requestdata')
+    def update_config(self, config):
+        toolkit.add_template_directory(config, 'templates')
+        toolkit.add_public_directory(config, 'public')
+        toolkit.add_resource('assets', 'requestdata')
 
     def update_config_schema(self, schema):
         ignore_missing = toolkit.get_validator('ignore_missing')
@@ -159,16 +159,3 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
 
     def package_types(self):
         return ['requestdata-metadata-only']
-
-    # IPackageController
-
-    def before_search(self, search_params):
-        fq = search_params.get('fq', '')
-
-        if 'dataset_type:dataset' in fq:
-            fq = fq.replace('dataset_type:dataset',
-                            'dataset_type: (dataset OR '
-                            'requestdata-metadata-only)')
-            search_params.update({'fq': fq})
-
-        return search_params

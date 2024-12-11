@@ -1,0 +1,21 @@
+main-js:
+  filter: rjsmin
+  output: ckanext-requestdata/%(version)s_main.js
+  extra:
+    preload:
+      - base/main
+  contents:
+    - add-dataset.js
+    # - disable-visibility.js
+    - expand-dataset.js
+    - filter-requests.js
+    - handle-open-request.js
+    - modal-form.js
+
+main-css:
+  output: ckanext-requestdata/%(version)s_main.css
+  filter: cssrewrite
+  contents:
+    - css/main.css
+    - css/new-requests.css
+    - css/request-header.css
