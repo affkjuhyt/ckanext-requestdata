@@ -1,7 +1,8 @@
 import logging
 import datetime
 
-from sqlalchemy import Table, Column, Index, ForeignKey, types, func, create_engine
+from sqlalchemy import Table, Column, Index, ForeignKey, types, func, \
+    create_engine
 from sqlalchemy.engine.reflection import Inspector
 
 from ckan.model.meta import metadata, mapper, Session
@@ -15,7 +16,8 @@ user_notification_table = None
 maintainers_table = None
 request_data_counters_table = None
 
-engine = create_engine("postgresql://ckan_default:123456@localhost/ckan_default")
+engine = create_engine(
+    "postgresql://ckan_default:123456@localhost/ckan_default")
 
 
 def setup():
