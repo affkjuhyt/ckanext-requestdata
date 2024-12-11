@@ -1,9 +1,6 @@
 {% extends "admin/base.html" %}
 
 {% import 'macros/form.html' as form %}
-{% set action_url = h.url_for('ckanadmin_email') %}
-
-{% ckan_extends %}
 
 {% block primary_content_inner %}
    <form method="post" action="{{ action_url }}"class="form-horizontal col-sm-12" id="email-body-form">

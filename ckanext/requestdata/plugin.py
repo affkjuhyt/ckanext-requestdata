@@ -73,19 +73,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
     #                 controller=request_data_controller,
     #                 action='send_request')
 
-    #     map.connect('ckanadmin_email', '/ckan-admin/email',
-    #                 controller=admin_controller,
-    #                 action='email', ckan_icon='envelope-alt')
-
-    #     map.connect('ckanadmin_requests_data', '/ckan-admin/requests_data',
-    #                 controller=admin_controller,
-    #                 action='requests_data', ckan_icon='list')
-
-    #     map.connect('download_requests_data',
-    #                 '/ckan-admin/requests_data/download',
-    #                 controller=admin_controller,
-    #                 action='download_requests_data')
-
     #     map.connect('simple_search', '/dataset', controller=search_controller,
     #                 action='search_datasets')
 

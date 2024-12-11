@@ -1,10 +1,9 @@
-{% extends "page.html" %}
+{% extends "admin/base.html" %}
 
 {% import 'macros/form.html' as form %}
 
-{% ckan_extends %}
 {% block primary %}
-  {% set service_url = h.url_for('download_requests_data') %}
+  {% set service_url = h.url_for('requestdata.requests_data') %}
   {% set csv = '?format=csv'%}
   {% set json = '?format=json'%}
   {% if organizations %}
@@ -23,7 +22,7 @@
     </div>
       {% if organizations %}
         <div class="total-requests-filter">
-          {% snippet 'requestdata/snippets/filter_requests.html', title='Organization', filter_options=organizations_for_filters, type='maintainer', type='organization' %}
+          {% snippet 'requestdata/snippets/filter_requests.html', title='Organization', filter_options=organizations_for_filters, type='organization' %}
         </div>
       {% endif %}
   </div>
@@ -35,7 +34,7 @@
       {% snippet 'requestdata/snippets/section_base.html', state='open', title='Open', requests=org['requests_open'], template_type='admin' %}
 
       {% if org['requests_archive'] %}
-        {% set service_url = h.url_for('ckanadmin_requests_data') %}
+        {% set service_url = h.url_for('requestdata.requests_data') %}
         {% snippet 'requestdata/snippets/order_requests.html', service_url=service_url, org_name=org.name, current_order_name=org.current_order_name %}
       {% endif %}
 
