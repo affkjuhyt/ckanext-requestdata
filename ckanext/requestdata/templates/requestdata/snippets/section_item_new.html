@@ -13,12 +13,13 @@ Example usage:
 {% set is_hdx_portal = h.requestdata_is_hdx_portal() %}
 
 {% if not is_hdx_portal %}
-  {% include 'requestdata/css/new-requests.css' %}
+  {% asset 'requestdata/css/new-requests.css' %}
 {% endif %}
 
-{% set package_url = h.url_for(controller='package', action='read', id=item.package_id) %}
+{% set package_url = h.url_for(controller='dataset', action='read', id=item.package_id) %}
 
-{% ckan_extends %}
+{% asset 'requestdata/modal-form.js' %}
+
 <div class="requested-data-container__content-item" style="background-color: #FEFBED; {% if index == 1 %} border-top: 1px solid #CCCCCC {% endif %}">
   <div class="requested-data-container__content-item--sections" style="padding-top: 15px;">
     <h4>
@@ -87,5 +88,3 @@ Example usage:
     </div>
   </div>
 </div>
-
-<script src="{{ resource_url('requestdata/modal-form.js') }}"></script>

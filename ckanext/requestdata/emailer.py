@@ -76,12 +76,18 @@ def send_email(content, to, subject, file=None):
 
     try:
         print("SSSSSSSSSSSSSSSSSSSSSSSSSS")
-        s = smtplib.SMTP(SMTP_SERVER)
-        if SMTP_USER:
-            s.login(SMTP_USER, SMTP_PASSWORD)
-        print("sendingggggggggggggggggg")
-        s.sendmail(from_, to, msg.as_string())
-        s.quit()
+        # s = smtplib.SMTP(SMTP_SERVER)
+        # if SMTP_USER:
+        #     s.login(SMTP_USER, SMTP_PASSWORD)
+        # print("sendingggggggggggggggggg")
+        # s.sendmail(from_, to, msg.as_string())
+        # s.quit()
+        with smtplib.SMTP(SMTP_SERVER, 2525) as server:
+            server.starttls()
+            print("login")
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            print("send email")
+            server.sendmail(from_, to, msg.as_string())
 
         print("send successs")
         response_dict = {
