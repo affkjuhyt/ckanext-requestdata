@@ -4,12 +4,8 @@ import unicodecsv as csv
 
 import ckan.lib.helpers as h
 import ckan.lib.navl.dictization_functions as dict_fns
-
 import ckan.model as model
 import ckan.plugins.toolkit as tk
-
-from ckanext.requestdata.emailer import send_email
-from paste.deploy.converters import asbool
 
 from ckan import logic
 from ckan.common import c, _, request, config
@@ -19,11 +15,12 @@ from ckan.views.admin import _get_sysadmins
 
 from flask import Blueprint, Response, redirect
 from flask import request as rq
-from ckanext.requestdata import emailer
-from email_validator import validate_email
 
+from email_validator import validate_email
 from collections import Counter
 from ckanext.requestdata import helpers
+from ckanext.requestdata.emailer import send_email
+from paste.deploy.converters import asbool
 from io import StringIO
 
 
@@ -41,6 +38,7 @@ parse_params = logic.parse_params
 abort = base.abort
 render = base.render
 
+
 def _get_context():
     return {
         'model': model,
@@ -50,13 +48,39 @@ def _get_context():
     }
 
 
+def _parse_form_data(request):
+    return logic.clean_dict(
+        dict_fns.unflatten(
+            logic.tuplize_dict(
+                logic.parse_params(request.form)
+            )
+        )
+    )
+
+
 def _get_action(action, data_dict):
     return tk.get_action(action)(_get_context(), data_dict)
 
 
+def _org_admins_for_dataset(dataset_name):
+    package = _get_action('package_show', {'id': dataset_name})
+    owner_org = package['owner_org']
+
+    org = _get_action('organization_show', {'id': owner_org})
+
+    return [
+        {
+            'email': model.User.get(user['id']).email,
+            'fullname': model.User.get(user['id']).fullname or model.User.get(user['id']).name
+        }
+        for user in org['users'] if user['capacity'] == 'admin'
+    ]
+
+
 def _get_email_configuration(
-        user_name, data_owner, dataset_name, email, message, organization,
-        data_maintainers, only_org_admins=False):
+    user_name, data_owner, dataset_name, email, message, organization,
+    data_maintainers, only_org_admins=False
+):
     schema = logic.schema.update_configuration_schema()
     avaiable_terms = ['{name}', '{data_maintainers}', '{dataset}',
                       '{organization}', '{message}', '{email}']
@@ -65,20 +89,24 @@ def _get_email_configuration(
 
     try:
         is_user_sysadmin = \
-            _get_action('user_show', {'id': c.user}).get('sysadmin')
+            _get_action('user_show', {'id': c.user}).get('sysadmin', False)
     except NotFound:
-        pass
+        is_user_sysadmin = False
 
+    email_header = email_body = email_footer = ""
     for key in schema:
+        config_value = config.get(key, "")
         if 'email_header' in key:
-            email_header = config.get(key)
+            email_header = config_value
         elif 'email_body' in key:
-            email_body = config.get(key)
+            email_body = config_value
         elif 'email_footer' in key:
-            email_footer = config.get(key)
+            email_footer = config_value
+
     if '{message}' not in email_body and not email_body and not email_footer:
         email_body += message
         return email_body
+
     for i in range(0, len(avaiable_terms)):
         if avaiable_terms[i] == '{dataset}' and new_terms[i]:
             url = tk.url_for(
@@ -110,16 +138,16 @@ def _get_email_configuration(
     if only_org_admins:
         owner_org = _get_action('package_show',
                                 {'id': dataset_name}).get('owner_org')
-        url = tk.url_for('requestdata_organization_requests',
-                              id=owner_org, qualified=True)
+        url = tk.url_for('requestdata_organization_requests', id=owner_org,
+                         qualified=True)
         email_body += '<br><br> This dataset\'s maintainer does not exist.\
          Go to your organisation\'s <a href="' + url + '">Requested Data</a>\
           page to see the new request. Please also edit the dataset and assign\
            a new maintainer.'
     else:
         url = \
-            tk.url_for('requestdata_my_requests',
-                            id=data_owner, qualified=True)
+            tk.url_for('requestdata_my_requests', 
+                       id=data_owner, qualified=True)
         email_body += '<br><br><strong> Please accept or decline the request\
          as soon as you can by visiting the \
          <a href="' + url + '">My Requests</a> page.</strong>'
@@ -135,7 +163,7 @@ def _get_email_configuration(
                     and package['owner_org'] == org['id']:
                 url = \
                     tk.url_for('requestdata_organization_requests',
-                                    id=org['name'], qualified=True)
+                               id=org['name'], qualified=True)
                 email_body += '<br><br> Go to <a href="' + url + '">\
                               Requested data</a> page in organization admin.'
 
@@ -162,22 +190,14 @@ def _get_email_configuration(
 
     """
 
-    result = email_header + '<br><br>' + email_body + '<br><br>' + email_footer
-
-    return result
+    return email_header + '<br><br>' + email_body + '<br><br>' + email_footer
 
 
 @bp.route("/<group_type>/requested_data/<id>")
 def requested_data(group_type: str, id: str):
-    '''Handles creating template for 'Requested Data' page in the
-    organization's dashboard.
-    :param id: The organization's id.
-    :type id: string
-    :returns: template
-    '''
     try:
         requests = _get_action('requestdata_request_list_for_organization',
-                                   {'org_id': id})
+                               {'org_id': id})
         logging.debug("requests: ", requests)
     except NotAuthorized:
         abort(403, _('Not authorized to see this page.'))
@@ -354,8 +374,8 @@ def requested_data(group_type: str, id: str):
 
     if organ['name'] == q_organization:
         grouped_requests_archive = sorted(grouped_requests_archive,
-                                            key=lambda x: x[order],
-                                            reverse=reverse)
+                                          key=lambda x: x[order],
+                                          reverse=reverse)
 
     counters =\
         _get_action('requestdata_request_data_counters_get_by_org',
@@ -372,7 +392,7 @@ def requested_data(group_type: str, id: str):
     }
 
     _setup_template_variables(context, {'id': id},
-                                    group_type=group_type)
+                              group_type=group_type)
 
     return tk.render(
         'requestdata/organization_requested_data.html',
@@ -382,18 +402,9 @@ def requested_data(group_type: str, id: str):
 
 @bp.route("/user/my_requested_data/<id>")
 def my_requested_data(id: str):
-    '''Handles creating template for 'My Requested Data' page in the
-    user's dashboard.
-
-    :param id: The user's id.
-    :type id: string
-
-    :returns: template
-
-    '''
     try:
         requests = _get_action('requestdata_request_list_for_current_user',
-                                {})
+                               {})
     except NotAuthorized:
         abort(403, _('Not authorized to see this page.'))
     
@@ -410,33 +421,33 @@ def my_requested_data(id: str):
     order = 'last_request_created_at'
     current_order_name = 'Most Recent'
 
-    # if order_by != '':
-    #     if 'shared' in order_by:
-    #         order = 'shared'
-    #         current_order_name = 'Sharing Rate'
-    #     elif 'requests' in order_by:
-    #         order = 'requests'
-    #         current_order_name = 'Requests Rate'
-    #     elif 'asc' in order_by:
-    #         reverse = False
-    #         order = 'title'
-    #         current_order_name = 'Alphabetical (A-Z)'
-    #     elif 'desc' in order_by:
-    #         reverse = True
-    #         order = 'title'
-    #         current_order_name = 'Alphabetical (Z-A)'
-    #     elif 'most_recent' in order_by:
-    #         reverse = True
-    #         order = 'last_request_created_at'
+    if order_by != '':
+        if 'shared' in order_by:
+            order = 'shared'
+            current_order_name = 'Sharing Rate'
+        elif 'requests' in order_by:
+            order = 'requests'
+            current_order_name = 'Requests Rate'
+        elif 'asc' in order_by:
+            reverse = False
+            order = 'title'
+            current_order_name = 'Alphabetical (A-Z)'
+        elif 'desc' in order_by:
+            reverse = True
+            order = 'title'
+            current_order_name = 'Alphabetical (Z-A)'
+        elif 'most_recent' in order_by:
+            reverse = True
+            order = 'last_request_created_at'
 
-    #     for item in requests:
-    #         package =\
-    #             _get_action('package_show', {'id': item['package_id']})
-    #         count = _get_action('requestdata_request_data_counters_get',
-    #                             {'package_id': item['package_id']})
-    #         item['title'] = package['title']
-    #         item['shared'] = count.shared
-    #         item['requests'] = count.requests
+        for item in requests:
+            package =\
+                _get_action('package_show', {'id': item['package_id']})
+            count = _get_action('requestdata_request_data_counters_get',
+                                {'package_id': item['package_id']})
+            item['title'] = package['title']
+            item['shared'] = count.shared
+            item['requests'] = count.requests
 
     for item in requests:
         try:
@@ -445,7 +456,7 @@ def my_requested_data(id: str):
             package_maintainers_ids = package['maintainer'].split(',')
             item['title'] = package['title']
         except NotFound as e:
-            # package was not found, possibly deleted
+            logging.debug("Error: ", e)
             continue
         maintainers = []
         for i in package_maintainers_ids:
@@ -481,8 +492,8 @@ def my_requested_data(id: str):
     if order:
         requests_archive = \
             sorted(requests_archive,
-                    key=lambda x: x[order],
-                    reverse=reverse)
+                   key=lambda x: x[order],
+                   reverse=reverse)
 
     extra_vars = {
         'requests_new': requests_new,
@@ -510,10 +521,6 @@ def my_requested_data(id: str):
 
 @bp.route("/ckan-admin/email")
 def email():
-    '''
-    Handles creating the email template in admin dashboard.
-    :returns template
-    '''
     data = request.params
     if 'save' in data:
         try:
@@ -539,13 +546,6 @@ def email():
 
 @bp.route("/ckan-admin/requests_data")
 def requests_data():
-    '''
-        Handles creating template for 'Requested Data' page in the
-        admin dashboard.
-
-        :returns: template
-
-    '''
     try:
         requests = _get_action('requestdata_request_list_for_sysadmin', {})
     except NotAuthorized:
@@ -640,7 +640,7 @@ def requests_data():
             org = _get_action('organization_show', data_dict)
             item['title'] = package['title']
         except NotFound as e:
-            # package was not found, possibly deleted
+            logging.debug("Error: ", e)
             continue
 
         if org['id'] in organizations_for_filters:
@@ -705,8 +705,7 @@ def requests_data():
             organizations.append(data)
         else:
             current_org = \
-                next(item for item in organizations
-                        if item['id'] == org['id'])
+                next(item for item in organizations if item['id'] == org['id'])
 
             payload = {'id': id, 'name': name, 'username': username}
             current_org['maintainers'].append(payload)
@@ -723,8 +722,7 @@ def requests_data():
     for org in organizations:
         copy_of_maintainers = org['maintainers']
         org['maintainers'] = \
-            dict((item['id'], item)
-                    for item in org['maintainers']).values()
+            dict((item['id'], item) for item in org['maintainers']).values()
 
         # Count how many requests each maintainer has
         for main in org['maintainers']:
@@ -735,8 +733,8 @@ def requests_data():
         # Sort maintainers by number of requests
         org['maintainers'] = \
             sorted(org['maintainers'],
-                    key=lambda k: k['count'],
-                    reverse=True)
+                   key=lambda k: k['count'],
+                   reverse=True)
 
         total_organizations = \
             org['requests_new'] + \
@@ -812,8 +810,8 @@ def requests_data():
 
         org['requests_archive'] = \
             sorted(org['requests_archive'],
-                    key=lambda x: x[order],
-                    reverse=reverse)
+                   key=lambda x: x[order],
+                   reverse=reverse)
 
     organizations_for_filters = sorted(
         organizations_for_filters.items(),
@@ -834,12 +832,6 @@ def requests_data():
 
 @bp.route("/ckan-admin/requests_data/download")
 def download_requests_data():
-    '''
-        Handles creating csv or json file from all of the Requested Data
-
-        :returns: json or csv file
-    '''
-
     file_format = request.query_string()
     requests = \
         _get_action('requestdata_request_list_for_sysadmin', {})
@@ -877,30 +869,8 @@ def download_requests_data():
     )
 
 
-def _org_admins_for_dataset(self, dataset_name):
-    package = _get_action('package_show', {'id': dataset_name})
-    owner_org = package['owner_org']
-    admins = []
-
-    org = _get_action('organization_show', {'id': owner_org})
-
-    for user in org['users']:
-        if user['capacity'] == 'admin':
-            db_user = model.User.get(user['id'])
-            data = {
-                'email': db_user.email,
-                'fullname': db_user.fullname or db_user.name
-            }
-            admins.append(data)
-
-    return admins
-
-
 @bp.route("/dataset/new", methods=["GET", "POST"])
 def create_metadata_package():
-    """
-    Handles the creation of a new metadata package.
-    """
     # if helpers.has_query_param('metadata'):
     package_type = 'requestdata-metadata-only'
     form_vars = {
@@ -918,7 +888,7 @@ def create_metadata_package():
 
     # if tk.request.method == 'POST':
     context = {'model': model, 'session': model.Session,
-            'user': c.user, 'auth_user_obj': c.userobj}
+               'user': c.user, 'auth_user_obj': c.userobj}
 
     data_dict = clean_dict(dict_fns.unflatten(
         tuplize_dict(parse_params(rq.form))))
@@ -953,18 +923,8 @@ def create_metadata_package():
             'dataset_type': package_type
         }
 
-        return tk.render('package/new.html',
-                            extra_vars=extra_vars)
-    
-def _parse_form_data(request):
-    return logic.clean_dict(
-        dict_fns.unflatten(
-            logic.tuplize_dict(
-                logic.parse_params(request.form)
-            )
-        )
-    )
-    
+        return tk.render('package/new.html', extra_vars=extra_vars)
+
 
 @bp.route("/request_data", methods=["POST"])
 def send_request():
@@ -976,7 +936,7 @@ def send_request():
     :rtype: json
     '''
     context = {'model': model, 'session': model.Session,
-                   'user': c.user, 'auth_user_obj': c.userobj}
+               'user': c.user, 'auth_user_obj': c.userobj}
     try:
         if tk.request.method == 'POST':
             data = _parse_form_data(tk.request)
@@ -1006,7 +966,7 @@ def send_request():
 
     orgs = []
     for i in organizations:
-            orgs.append(i['display_name'])
+        orgs.append(i['display_name'])
     org = ','.join(orgs)
     dataset_name = package['name']
     dataset_title = package['title']
@@ -1046,8 +1006,7 @@ def send_request():
         for id in maintainers:
             try:
                 user =\
-                    tk.get_action('user_show')(context_sysadmin,
-                                                    {'id': id})
+                    tk.get_action('user_show')(context_sysadmin, {'id': id})
                 data_dict['users'].append(user)
                 users_email.append(user['email'])
                 data_maintainers.append(user['fullname'] or user['name'])
@@ -1071,7 +1030,7 @@ def send_request():
             only_org_admins=only_org_admins)
 
         response_message = \
-            emailer.send_email(content, users_email, mail_subject)
+            send_email(content, users_email, mail_subject)
 
         # notify package creator that new data request was made
         _get_action('requestdata_notification_create', data_dict)
@@ -1093,22 +1052,11 @@ def send_request():
         return json.dumps(message)
 
 
-@bp.route('/user/my_requested_data/<username>/<request_action>', methods=['GET', 'POST'])
+@bp.route(
+    '/user/my_requested_data/<username>/<request_action>',
+    methods=['GET', 'POST']
+)
 def handle_new_request_action(username, request_action):
-    '''Handles sending email to the person who created the request, as well
-    as updating the state of the request depending on the data sent.
-
-    :param username: The user's name.
-    :type username: string
-
-    :param request_action: The current action. Can be either reply or
-    reject
-    :type request_action: string
-
-    :rtype: json
-
-    '''
-
     data = _parse_form_data(tk.request)
 
     if request_action == 'reply':
@@ -1201,21 +1149,11 @@ def handle_new_request_action(username, request_action):
     return json.dumps(success)
 
 
-@bp.route('/user/my_requested_data/<username>/<request_action>', methods=['GET', 'POST'])
+@bp.route(
+    '/user/my_requested_data/<username>/<request_action>',
+    methods=['GET', 'POST']
+)
 def handle_open_request_action(username, request_action):
-    '''Handles updating the state of the request depending on the data
-        sent.
-
-    :param username: The user's name.
-    :type username: string
-
-    :param request_action: The current action. Can be either shared or
-    notshared
-    :type request_action: string
-
-    :rtype: json
-
-    '''
     data = dict(tk.request.POST)
     if 'data_shared' in data:
         data['data_shared'] = asbool(data['data_shared'])
