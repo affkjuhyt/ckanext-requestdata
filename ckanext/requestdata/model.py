@@ -126,19 +126,19 @@ class ckanextRequestdata(DomainObject):
         :param id: User is
         :type id: string
         '''
-        maintainer_id = id
-        requests = Session.query(ckanextRequestdata, ckanextMaintainers)\
-                          .join(ckanextMaintainers)\
-                          .filter(ckanextRequestdata.id ==
-                                  ckanextMaintainers.request_data_id,
-                                  ckanextMaintainers.maintainer_id ==
-                                  maintainer_id)\
-                          .all()
+        query = (
+            Session.query(ckanextRequestdata, ckanextMaintainers)
+            .join(ckanextMaintainers, ckanextRequestdata.id == ckanextMaintainers.request_data_id)
+            .filter(ckanextMaintainers.maintainer_id == id)
+        )
 
-        requests_data = []
-        for r in requests:
-            request = {}
-            request.update({
+        if order:
+            query = query.order_by(order)
+
+        requests = query.all()
+
+        return [
+            {
                 'id': r.ckanextRequestdata.id,
                 'sender_name': r.ckanextRequestdata.sender_name,
                 'sender_user_id': r.ckanextRequestdata.sender_user_id,
@@ -152,9 +152,9 @@ class ckanextRequestdata(DomainObject):
                 'modified_at': r.ckanextRequestdata.modified_at,
                 'maintainer_id': r.ckanextMaintainers.maintainer_id,
                 'email': r.ckanextMaintainers.email
-            })
-            requests_data.append(request)
-        return requests_data
+            }
+            for r in requests
+        ]
 
 
 def define_request_data_table():
@@ -198,7 +198,6 @@ class ckanextUserNotification(DomainObject):
     def get(self, **kwds):
         '''Finds a single entity in the table.
         '''
-
         return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
@@ -207,7 +206,6 @@ class ckanextUserNotification(DomainObject):
         :param order: Order rows by specified column.
         :type order: string
         '''
-
         return Session.query(self).autoflush(False).filter_by(**kwds).all()
 
 
@@ -238,7 +236,6 @@ class ckanextMaintainers(DomainObject):
     def get(self, **kwds):
         '''Finds a single entity in the table.
         '''
-
         return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
@@ -247,7 +244,6 @@ class ckanextMaintainers(DomainObject):
         :param order: Order rows by specified column.
         :type order: string
         '''
-
         return Session.query(self).autoflush(False).filter_by(**kwds).all()
 
     @classmethod
@@ -258,10 +254,9 @@ class ckanextMaintainers(DomainObject):
         '''
         Session.add_all(maintainers)
         Session.commit()
-        data_dict = {
+        return {
             'requestdata_id': requestdata_id
         }
-        return data_dict
 
 
 def define_maintainers_table():
@@ -289,7 +284,6 @@ class ckanextRequestDataCounters(DomainObject):
     def get(self, **kwds):
         '''Finds a single entity in the table.
         '''
-
         return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
@@ -299,22 +293,19 @@ class ckanextRequestDataCounters(DomainObject):
         :type order: string
         '''
 
-        request = Session.query(func.sum(ckanextRequestDataCounters.requests))\
-                         .all()
-        replied = Session.query(func.sum(ckanextRequestDataCounters.replied))\
-                         .all()
-        declined_sum = func.sum(ckanextRequestDataCounters.declined)
-        declined = Session.query(declined_sum).all()
-        shared = Session.query(func.sum(ckanextRequestDataCounters.shared))\
-                        .all()
-        counters = {
-            'requests': request,
-            'replied': replied,
-            'declined': declined,
-            'shared': shared
+        fields = {
+            'requests': ckanextRequestDataCounters.requests,
+            'replied': ckanextRequestDataCounters.replied,
+            'declined': ckanextRequestDataCounters.declined,
+            'shared': ckanextRequestDataCounters.shared
         }
 
-        return counters
+        result = {
+            key: Session.query(func.sum(field)).filter_by(**kwds).scalar() or 0
+            for key, field in fields.items()
+        }
+
+        return result
 
     @classmethod
     def search_by_organization(self, **kwds):
@@ -323,22 +314,19 @@ class ckanextRequestDataCounters(DomainObject):
         :type order: string
         '''
 
-        request = Session.query(func.sum(ckanextRequestDataCounters.requests))
-        request = request.filter_by(**kwds).all()
-        replied = Session.query(func.sum(ckanextRequestDataCounters.replied))
-        replied = replied.filter_by(**kwds).all()
-        declined = Session.query(func.sum(ckanextRequestDataCounters.declined))
-        declined = declined.filter_by(**kwds).all()
-        shared = Session.query(func.sum(ckanextRequestDataCounters.shared))
-        shared = shared.filter_by(**kwds).all()
-        counters = {
-            'requests': request,
-            'replied': replied,
-            'declined': declined,
-            'shared': shared
+        fields = {
+            'requests': ckanextRequestDataCounters.requests,
+            'replied': ckanextRequestDataCounters.replied,
+            'declined': ckanextRequestDataCounters.declined,
+            'shared': ckanextRequestDataCounters.shared
         }
 
-        return counters
+        result = {
+            key: Session.query(func.sum(field)).filter_by(**kwds).scalar() or 0
+            for key, field in fields.items()
+        }
+
+        return result
 
 
 def define_request_data_counters_table():
