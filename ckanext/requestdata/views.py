@@ -869,59 +869,88 @@ def download_requests_data():
 
 @bp.route("/dataset/new", methods=["GET", "POST"])
 def create_metadata_package():
-    # if helpers.has_query_param('metadata'):
-    package_type = 'requestdata-metadata-only'
-    form_vars = {
-        'errors': {},
-        'dataset_type': package_type,
-        'action': 'new',
-        'error_summary': {},
-        'data': {
-            'tag_string': '',
-            'group_id': None,
-            'type': package_type
-        },
-        'stage': ['active']
-    }
-
-    # if tk.request.method == 'POST':
-    context = {'model': model, 'session': model.Session,
-               'user': c.user, 'auth_user_obj': c.userobj}
-
-    data_dict = clean_dict(dict_fns.unflatten(
-        tuplize_dict(parse_params(rq.form))))
-    data_dict['type'] = package_type
-
-    try:
-        package = get_action('package_create')(context, data_dict)
-
-        url = h.url_for(controller='dataset', action='read',
-                        id=package['name'])
-
-        return redirect(url)
-    except NotAuthorized:
-        abort(403, _('Unauthorized to create a dataset.'))
-    except ValidationError as e:
-        errors = e.error_dict
-        error_summary = e.error_summary
-
+    if 'metadata' in request.args:
+        package_type = 'requestdata-metadata-only'
         form_vars = {
-            'errors': errors,
+            'errors': {},
             'dataset_type': package_type,
             'action': 'new',
-            'error_summary': error_summary,
+            'error_summary': {},
+            'data': {
+                'tag_string': '',
+                'group_id': None,
+                'type': package_type
+            },
             'stage': ['active']
         }
 
-        form_vars['data'] = data_dict
+        if request.method == 'POST':
+            context = {
+                'model': model,
+                'session': model.Session,
+                'user': c.user,
+                'auth_user_obj': c.userobj
+            }
 
-        extra_vars = {
-            'form_vars': form_vars,
-            'form_snippet': 'package/new_package_form.html',
-            'dataset_type': package_type
-        }
+            data_dict = clean_dict(
+                dict_fns.unflatten(
+                    tuplize_dict(parse_params(request.form))
+                )
+            )
+            data_dict['type'] = package_type
 
-        return tk.render('package/new.html', extra_vars=extra_vars)
+            try:
+                package = tk.get_action('package_create')(context, data_dict)
+
+                url = tk.url_for('dataset.read', id=package['name'])
+                return redirect(url)
+            except NotAuthorized:
+                abort(403, _('Unauthorized to create a dataset.'))
+            except ValidationError as e:
+                errors = e.error_dict
+                error_summary = e.error_summary
+
+                form_vars = {
+                    'errors': errors,
+                    'dataset_type': package_type,
+                    'action': 'new',
+                    'error_summary': error_summary,
+                    'stage': ['active']
+                }
+                form_vars['data'] = data_dict
+
+                extra_vars = {
+                    'form_vars': form_vars,
+                    'form_snippet': 'package/new_package_form.html',
+                    'dataset_type': package_type
+                }
+
+                return tk.render('package/new.html', extra_vars=extra_vars)
+        else:
+            return tk.render(
+                'package/new.html',
+                extra_vars={
+                    'form_vars': form_vars,
+                    'form_snippet': 'package/new_package_form.html',
+                    'dataset_type': package_type
+                }
+            )
+    else:
+        return tk.render(
+            'package/new.html',
+            extra_vars={
+                'form_vars': {
+                    'errors': {},
+                    'dataset_type': 'dataset',
+                    'action': 'new',
+                    'error_summary': {},
+                    'data': {},
+                    'stage': ['active']
+                },
+                'form_snippet': 'package/new_package_form.html',
+                'dataset_type': 'dataset'
+            }
+        )
 
 
 @bp.route("/request_data", methods=["POST"])
