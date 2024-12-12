@@ -519,7 +519,7 @@ def my_requested_data(id: str):
     return tk.render('requestdata/my_requested_data.html', extra_vars)
 
 
-@bp.route("/ckan-admin/email")
+@bp.route("/ckan-admin/email", methods=["GET", "POST"])
 def email():
     data = request.params
     if 'save' in data:

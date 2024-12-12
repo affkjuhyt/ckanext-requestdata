@@ -3,6 +3,7 @@ import datetime
 
 from sqlalchemy import Table, Column, Index, ForeignKey, types, func, \
     create_engine
+from sqlalchemy.sql import text
 from sqlalchemy.engine.reflection import Inspector
 
 from ckan.model.meta import metadata, mapper, Session
@@ -109,7 +110,7 @@ class ckanextRequestdata(DomainObject):
         return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
-    def search(self, order='', **kwds):
+    def search(self, order='modified_at', **kwds):
         '''Finds entities in the table that satisfy certain criteria.
         :param order: Order rows by specified column.
         :type order: string
@@ -117,7 +118,7 @@ class ckanextRequestdata(DomainObject):
 
         query = Session.query(self).autoflush(False)
         query = query.filter_by(**kwds)
-        query = query.order_by(order)
+        query = query.order_by(text("modified_at desc"))
         return query.all()
 
     @classmethod

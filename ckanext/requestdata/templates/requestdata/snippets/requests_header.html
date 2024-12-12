@@ -6,17 +6,17 @@
     <div class="requests-header-counters">
       <span>
         <img src="/images/icons/reply.svg" class="requested-data-container__content-item-counters--icon requested-data-container__content-item-counters--replied" />
-        <span>{{ counters.replied[0][0] or 0 }} Replied</span>
+        <span>{{ counters.replied or 0 }} Replied</span>
       </span>
 
       <span>
         <img src="/images/icons/declined.svg" class="requested-data-container__content-item-counters--icon" />
-        <span>{{ counters.declined[0][0] or 0 }} Denied</span>
+        <span>{{ counters.declined or 0 }} Denied</span>
       </span>
 
       <span>
         <img src="/images/icons/shared.svg" class="requested-data-container__content-item-counters--icon" />
-        <span>{{ counters.shared[0][0] or 0 }} Shared</span>
+        <span>{{ counters.shared or 0 }} Shared</span>
       </span>
     </div>
 
