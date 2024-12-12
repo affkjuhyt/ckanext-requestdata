@@ -407,21 +407,19 @@ def my_requested_data(id: str):
                                {})
     except NotAuthorized:
         abort(403, _('Not authorized to see this page.'))
-    
+
     c.is_myself = id == c.user
 
     if not c.is_myself:
         abort(403, _('Not authorized to see this page.'))
 
     order_by = request.query_string
-    requests_new = []
-    requests_open = []
-    requests_archive = []
+    requests_new = requests_open = requests_archive = []
     reverse = True
     order = 'last_request_created_at'
     current_order_name = 'Most Recent'
 
-    if order_by != '':
+    if order_by != b'':
         if 'shared' in order_by:
             order = 'shared'
             current_order_name = 'Sharing Rate'
