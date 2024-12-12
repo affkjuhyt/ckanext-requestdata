@@ -5,7 +5,7 @@ from ckan.logic import check_access, NotFound
 import ckan.lib.navl.dictization_functions as df
 from ckan.model.user import User
 from ckanext.requestdata.logic import schema
-from ckanext.requestdata.model import ckanextRequestdata,\
+from ckanext.requestdata.model import ckanextRequestdata, \
     ckanextUserNotification, ckanextMaintainers, ckanextRequestDataCounters
 from ckanext.requestdata import helpers
 
@@ -222,7 +222,7 @@ def request_patch(context, data_dict):
     fields = request_patch_schema.keys()
 
     # Exclude fields from the schema that are not in data_dict
-    for field in fields:
+    for field in list(fields):
         if field not in data_dict.keys() and\
            (field != 'id' and field != 'package_id'):
             request_patch_schema.pop(field)

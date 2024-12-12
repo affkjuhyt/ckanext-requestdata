@@ -84,7 +84,7 @@ this.ckan.module('handle-open-request', function($) {
             this.el.removeAttr('disabled')
           }
         }.bind(this))
-        .error(function(error) {
+        .fail(function(error) {
           this.el.removeAttr('disabled')
         }.bind(this))
     },

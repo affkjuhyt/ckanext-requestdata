@@ -69,21 +69,15 @@ this.ckan.module('modal-form', function(jQuery) {
                 console.error('Received empty snippet HTML');
                 return;
             }
-            console.log("html: ", html)
             this.sandbox.body.append(this.createModal(html));
-            console.log("FFFFFFFFFFFF: ", this.modal)
 
             if (typeof jQuery.fn.modal === 'undefined') {
                 console.error('Bootstrap modal plugin is not loaded.');
                 return;
-            } else {
-                console.log("Bootstrap work")
             }
             this.modal.modal('show');
 
-            console.log("aAAAAAAA")
             var backdrop = $('.modal-backdrop');
-            console.log("backdrop: ", backdrop)
             if (backdrop.length) {
                 backdrop.on('click', this._onCancel.bind(this));
             }
@@ -151,18 +145,25 @@ this.ckan.module('modal-form', function(jQuery) {
                     type: 'POST'
                 })
                     .done(function(data) {
+                        this._snippetReceived = false;
+                        this._clearFormErrors();
+                        this._resetModalForm();
                         if (data.error && data.error.fields) {
                             for (var key in data.error.fields) {
                                 this._showFormError(data.error.fields[key]);
                             }
                         } else if (data.success) {
                             this._showSuccessMsg(data.message);
+                            this._snippetReceived = false;
+                            this._clearFormErrors();
+                            this._resetModalForm();
                             if (this.options.disable_action_buttons) {
                                 this._disableActionButtons();
                             }
                             if (this.options.refresh_on_success) {
                                 location.reload();
                             }
+                            this.modal.modal('hide')
                         }
                     }.bind(this))
                     .fail(function(error) {
