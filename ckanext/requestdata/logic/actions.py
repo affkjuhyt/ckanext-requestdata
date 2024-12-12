@@ -309,16 +309,16 @@ def notification_for_current_user(context, data_dict):
     :rtype: boolean
 
     '''
-
+    print("Go to here AAAAAAAAAA")
     model = context['model']
     user_id = model.User.get(context['user']).id
+    print("user_id: ", user_id)
     notification = ckanextUserNotification.get(package_maintainer_id=user_id)
+    print("notification: ", notification)
     if notification is None:
-        # do not display notification
         return True
     else:
-        is_notified = notification.seen
-        return is_notified
+        return notification.seen
 
 
 @tk.side_effect_free

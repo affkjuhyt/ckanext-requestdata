@@ -67,14 +67,7 @@ def get_package_title(package_id):
 
 
 def get_notification():
-    '''Returns a boolean which indicates if notification was seen or not
-
-      :rtype: bool
-
-      '''
-
-    notification = _get_action('requestdata_notification_for_current_user', {})
-    return notification
+    return _get_action('requestdata_notification_for_current_user', {})
 
 
 def get_request_counters(id):
@@ -86,10 +79,7 @@ def get_request_counters(id):
 
      '''
 
-    package_id = id
-    data_dict = {'package_id': package_id}
-    counters = _get_action('requestdata_request_data_counters_get', data_dict)
-    return counters
+    return _get_action('requestdata_request_data_counters_get', {'package_id': id})
 
 
 def convert_id_to_email(ids):
