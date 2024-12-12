@@ -145,9 +145,7 @@ this.ckan.module('modal-form', function(jQuery) {
                     type: 'POST'
                 })
                     .done(function(data) {
-                        this._snippetReceived = false;
-                        this._clearFormErrors();
-                        this._resetModalForm();
+                        data = JSON.parse(data)
                         if (data.error && data.error.fields) {
                             for (var key in data.error.fields) {
                                 this._showFormError(data.error.fields[key]);
@@ -163,7 +161,6 @@ this.ckan.module('modal-form', function(jQuery) {
                             if (this.options.refresh_on_success) {
                                 location.reload();
                             }
-                            this.modal.modal('hide')
                         }
                     }.bind(this))
                     .fail(function(error) {

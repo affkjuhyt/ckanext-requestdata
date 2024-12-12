@@ -17,7 +17,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, tk.DefaultDatasetForm):
     plugins.implements(plugins.IPackageController, inherit=True)
 
     # IConfigurer
-
     def update_config(self, config):
         tk.add_template_directory(config, 'templates')
         tk.add_public_directory(config, 'public')
@@ -36,14 +35,10 @@ class RequestdataPlugin(plugins.SingletonPlugin, tk.DefaultDatasetForm):
         return schema
 
     # IConfigurable
-
     def configure(self, config):
-
-        # Setup requestdata model
         model_setup()
 
     # IActions
-
     def get_actions(self):
         return {
             'requestdata_request_create': actions.request_create,
@@ -72,7 +67,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, tk.DefaultDatasetForm):
         }
 
     # IAuthFunctions
-
     def get_auth_functions(self):
         return {
             'requestdata_request_create': auth.request_create,
@@ -87,7 +81,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, tk.DefaultDatasetForm):
         }
 
     # ITemplateHelpers
-
     def get_helpers(self):
         return {
             'requestdata_time_ago_from_datetime':
@@ -114,7 +107,6 @@ class RequestdataPlugin(plugins.SingletonPlugin, tk.DefaultDatasetForm):
         }
 
     # IDatasetForm
-
     def _modify_package_schema(self, schema):
         not_empty = tk.get_validator('not_empty')
         convert_to_extras = tk.get_converter('convert_to_extras')

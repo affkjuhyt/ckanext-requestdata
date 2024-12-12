@@ -21,8 +21,6 @@ engine = create_engine(
 
 
 def setup():
-    log.debug(f"Engine URL: {engine}")
-    log.debug(f"Metadata Bound: {metadata}")
     metadata.bind = engine
     metadata.create_all(engine)
     if request_data_table is None:
@@ -108,10 +106,7 @@ class ckanextRequestdata(DomainObject):
         '''Finds a single entity in the table.
         '''
 
-        query = Session.query(self).autoflush(False)
-        query = query.filter_by(**kwds).first()
-
-        return query
+        return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
     def search(self, order='', **kwds):
@@ -122,7 +117,7 @@ class ckanextRequestdata(DomainObject):
 
         query = Session.query(self).autoflush(False)
         query = query.filter_by(**kwds)
-        # query = query.order_by(order)
+        query = query.order_by(order)
         return query.all()
 
     @classmethod
@@ -204,9 +199,7 @@ class ckanextUserNotification(DomainObject):
         '''Finds a single entity in the table.
         '''
 
-        query = Session.query(self).autoflush(False)
-        query = query.filter_by(**kwds).first()
-        return query
+        return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
     def search(self, **kwds):
@@ -215,10 +208,7 @@ class ckanextUserNotification(DomainObject):
         :type order: string
         '''
 
-        query = Session.query(self).autoflush(False)
-        query = query.filter_by(**kwds)
-
-        return query.all()
+        return Session.query(self).autoflush(False).filter_by(**kwds).all()
 
 
 def define_user_notification_table():
@@ -249,10 +239,7 @@ class ckanextMaintainers(DomainObject):
         '''Finds a single entity in the table.
         '''
 
-        query = Session.query(self).autoflush(False)
-        query = query.filter_by(**kwds).first()
-
-        return query
+        return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
     def search(self, **kwds):
@@ -261,10 +248,7 @@ class ckanextMaintainers(DomainObject):
         :type order: string
         '''
 
-        query = Session.query(self).autoflush(False)
-        query = query.filter_by(**kwds)
-
-        return query.all()
+        return Session.query(self).autoflush(False).filter_by(**kwds).all()
 
     @classmethod
     def insert_all(self, maintainers, requestdata_id):
@@ -306,10 +290,7 @@ class ckanextRequestDataCounters(DomainObject):
         '''Finds a single entity in the table.
         '''
 
-        query = Session.query(self).autoflush(False)
-        query = query.filter_by(**kwds).first()
-
-        return query
+        return Session.query(self).autoflush(False).filter_by(**kwds).first()
 
     @classmethod
     def search(self, **kwds):

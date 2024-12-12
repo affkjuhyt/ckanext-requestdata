@@ -979,9 +979,7 @@ def send_request():
                    'user': c.user, 'auth_user_obj': c.userobj}
     try:
         if tk.request.method == 'POST':
-            print("go here")
             data = _parse_form_data(tk.request)
-            print("data: ", data)
             _get_action('requestdata_request_create', data)
     except NotAuthorized:
         abort(403, _('Unauthorized to update this dataset.'))
@@ -1072,12 +1070,10 @@ def send_request():
             message, org, data_maintainers,
             only_org_admins=only_org_admins)
 
-        print("send email............")
         response_message = \
             emailer.send_email(content, users_email, mail_subject)
 
         # notify package creator that new data request was made
-        print("send sucessfully...................")
         _get_action('requestdata_notification_create', data_dict)
         data_dict = {
             'package_id': data['package_id'],
@@ -1114,14 +1110,11 @@ def handle_new_request_action(username, request_action):
     '''
 
     data = _parse_form_data(tk.request)
-    print("data: ", data)
 
     if request_action == 'reply':
         reply_email = data.get('email')
-        print("reply email: ", reply_email)
 
         try:
-            print("validate email: ", reply_email)
             validate_email(reply_email)
         except Exception:
             error = {
@@ -1132,16 +1125,12 @@ def handle_new_request_action(username, request_action):
                     }
                 }
             }
-            print("email error: ")
-
             return json.dumps(error)
 
     counters_data_dict = {
         'package_id': data['package_id'],
         'flag': ''
     }
-    print("counter data dict: ", counters_data_dict)
-    print("data: ", data)
     if 'rejected' in data:
         data['rejected'] = asbool(data['rejected'])
         counters_data_dict['flag'] = 'declined'
@@ -1151,7 +1140,6 @@ def handle_new_request_action(username, request_action):
         counters_data_dict['flag'] = 'replied'
 
     message_content = data.get('message_content')
-    print("message content: ", message_content)
 
     if message_content is None or message_content == '':
         payload = {
@@ -1164,7 +1152,6 @@ def handle_new_request_action(username, request_action):
         return json.dumps(payload)
 
     try:
-        print("AAAAA: ", data)
         _get_action('requestdata_request_patch', data)
     except NotAuthorized:
         abort(403, _('Not authorized to use this action.'))
@@ -1189,10 +1176,8 @@ def handle_new_request_action(username, request_action):
         message_content += '<br><br> You can contact the maintainer on '\
             'this email address: ' + reply_email
 
-    print("send email............")
     response = send_email(message_content, to, subject, file=file)
 
-    print("successss: ", response)
     if response['success'] is False:
         error = {
             'success': False,
@@ -1231,7 +1216,6 @@ def handle_open_request_action(username, request_action):
     :rtype: json
 
     '''
-    print("call to here")
     data = dict(tk.request.POST)
     if 'data_shared' in data:
         data['data_shared'] = asbool(data['data_shared'])

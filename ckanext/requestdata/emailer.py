@@ -30,30 +30,28 @@ def send_email(content, to, subject, file=None):
 
     :rtype: string
     '''
-
-    msg = MIMEMultipart()
-
     from_ = SMTP_FROM
 
     if isinstance(to, str):
         to = [to]
 
+    msg = MIMEMultipart()
     msg['Subject'] = subject
     msg['From'] = from_
     msg['To'] = ','.join(to)
 
-    content = """\
-        <html>
-          <head></head>
-          <body>
-            <span>""" + content + """</span>
-          </body>
-        </html>
+    html_content = f"""
+    <html>
+      <head></head>
+      <body>
+        <span>{content}</span>
+      </body>
+    </html>
     """
 
-    msg.attach(MIMEText(content, 'html', _charset='utf-8'))
+    msg.attach(MIMEText(html_content, 'html', _charset='utf-8'))
 
-    if isinstance(file, cgi.FieldStorage):
+    if file and isinstance(file, cgi.FieldStorage):
         part = MIMEBase('application', 'octet-stream')
         part.set_payload(file.file.read())
         encoders.encode_base64(part)
@@ -72,13 +70,12 @@ def send_email(content, to, subject, file=None):
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(from_, to, msg.as_string())
 
-        response_dict = {
+        return {
             'success': True,
             'message': 'Email message was successfully sent.'
         }
-        return response_dict
     except SMTPRecipientsRefused:
-        error = {
+        return {
             'success': False,
             'error': {
                 'fields': {
@@ -87,12 +84,10 @@ def send_email(content, to, subject, file=None):
                 }
             }
         }
-        return error
     except socket_error:
         log.critical('Could not connect to email server. Have you configured '
                      'the SMTP settings?')
-        error_dict = {
+        return {
             'success': False,
             'message': 'An error occured while sending the email. Try again.'
         }
-        return error_dict
