@@ -123,7 +123,7 @@ def group_archived_requests_by_dataset(requests):
 
 
 def has_query_param(param):
-    params = dict(request.params)
+    params = dict(request.args)
 
     if param in params:
         return True
