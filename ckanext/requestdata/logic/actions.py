@@ -8,6 +8,7 @@ from ckanext.requestdata.logic import schema
 from ckanext.requestdata.model import ckanextRequestdata, \
     ckanextUserNotification, ckanextMaintainers, ckanextRequestDataCounters
 from ckanext.requestdata import helpers
+from ckan import model
 
 
 def request_create(context, data_dict):
@@ -258,6 +259,25 @@ def request_patch(context, data_dict):
     request.modified_at = datetime.datetime.now()
 
     request.save()
+    
+    # Save user request to group of dataset
+    package_id = request.package_id
+    sender_user_id = request.sender_user_id
+    package = model.Package.get(package_id)
+    group_id = package.owner_org
+    group = model.Group.get(group_id) # Get id group of current dataset
+    
+    # Save group
+    member_obj = model.Member(
+        table_id=sender_user_id, # id of user request
+        group=group,
+        group_id=group.id,
+        state="active",
+        table_name="user",
+        capacity="member",
+        
+    )
+    model.Session.add(member_obj)
 
     out = request.as_dict()
 
