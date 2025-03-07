@@ -264,20 +264,17 @@ def request_patch(context, data_dict):
     package_id = request.package_id
     sender_user_id = request.sender_user_id
     package = model.Package.get(package_id)
-    group_id = package.owner_org
-    group = model.Group.get(group_id) # Get id group of current dataset
+    user = model.User.get(sender_user_id)
+    user_name = user.name
     
-    # Save group
-    member_obj = model.Member(
-        table_id=sender_user_id, # id of user request
-        group=group,
-        group_id=group.id,
-        state="active",
-        table_name="user",
-        capacity="member",
-        
+    model.Session.execute(
+        """
+        INSERT INTO package_allowed_users (package_id, user_name)
+        VALUES (:package_id, :user_name)
+        """,
+        {"package_id": package_id, "user_name": user_name}
     )
-    model.Session.add(member_obj)
+    model.Session.commit()
 
     out = request.as_dict()
 
