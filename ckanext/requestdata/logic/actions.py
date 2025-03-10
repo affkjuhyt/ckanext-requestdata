@@ -200,6 +200,8 @@ def request_list_for_current_user(context, data_dict):
     user_id = model.User.get(context['user']).id
 
     requests = ckanextRequestdata.search_by_maintainers(user_id)
+    print("----------")
+    print("requests: ", requests)
     out = []
 
     for item in requests:
@@ -260,21 +262,37 @@ def request_patch(context, data_dict):
 
     request.save()
     
-    # Save user request to group of dataset
-    package_id = request.package_id
-    sender_user_id = request.sender_user_id
-    package = model.Package.get(package_id)
-    user = model.User.get(sender_user_id)
-    user_name = user.name
-    
-    model.Session.execute(
-        """
-        INSERT INTO package_allowed_users (package_id, user_name)
-        VALUES (:package_id, :user_name)
-        """,
-        {"package_id": package_id, "user_name": user_name}
-    )
-    model.Session.commit()
+    state = data_dict.get('state')
+    if state != 'archive':
+        # Save user request to group of dataset
+        package_id = request.package_id
+        sender_user_id = request.sender_user_id
+        package = model.Package.get(package_id)
+        user = model.User.get(sender_user_id)
+        user_name = user.name
+        
+        model.Session.execute(
+            """
+            INSERT INTO package_allowed_users (package_id, user_name)
+            VALUES (:package_id, :user_name)
+            """,
+            {"package_id": package_id, "user_name": user_name}
+        )
+        model.Session.commit()
+    elif state == 'archive':
+        package_id = request.package_id
+        sender_user_id = request.sender_user_id
+        package = model.Package.get(package_id)
+        user = model.User.get(sender_user_id)
+        user_name = user.name
+        model.Session.execute(
+            """
+            DELETE FROM package_allowed_users
+            WHERE package_id = :package_id AND user_name = :user_name
+            """,
+            {"package_id": package_id, "user_name": user_name}
+        )
+        model.Session.commit()
 
     out = request.as_dict()
 
@@ -326,12 +344,9 @@ def notification_for_current_user(context, data_dict):
     :rtype: boolean
 
     '''
-    print("Go to here AAAAAAAAAA")
     model = context['model']
     user_id = model.User.get(context['user']).id
-    print("user_id: ", user_id)
     notification = ckanextUserNotification.get(package_maintainer_id=user_id)
-    print("notification: ", notification)
     if notification is None:
         return True
     else:

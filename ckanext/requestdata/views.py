@@ -414,7 +414,9 @@ def my_requested_data(id: str):
         abort(403, _('Not authorized to see this page.'))
 
     order_by = request.query_string
-    requests_new = requests_open = requests_archive = []
+    requests_new = []
+    requests_open = []
+    requests_archive = []
     reverse = True
     order = 'last_request_created_at'
     current_order_name = 'Most Recent'
@@ -448,6 +450,8 @@ def my_requested_data(id: str):
             item['requests'] = count.requests
 
     for item in requests:
+        print(">>>>>>>>>>")
+        print("item: ", item)
         try:
             package =\
                 _get_action('package_show', {'id': item['package_id']})
@@ -493,6 +497,7 @@ def my_requested_data(id: str):
                    key=lambda x: x[order],
                    reverse=reverse)
 
+    print("len of request_new: ", len(requests_new))
     extra_vars = {
         'requests_new': requests_new,
         'requests_open': requests_open,
@@ -1067,7 +1072,9 @@ def send_request():
     methods=['GET', 'POST']
 )
 def handle_new_request_action(username, request_action):
+    print("handle new request action")
     data = _parse_form_data(tk.request)
+    print("data: ", data)
 
     if request_action == 'reply':
         reply_email = data.get('email')
@@ -1094,10 +1101,13 @@ def handle_new_request_action(username, request_action):
         counters_data_dict['flag'] = 'declined'
     elif 'data_shared' in data:
         counters_data_dict['flag'] = 'shared and replied'
+        data['message_content'] = "Data shared"
     else:
         counters_data_dict['flag'] = 'replied'
 
     message_content = data.get('message_content')
+    print("counters_data_dict: ", counters_data_dict)
+    print("message_content: ", message_content)
 
     if message_content is None or message_content == '':
         payload = {
@@ -1109,6 +1119,7 @@ def handle_new_request_action(username, request_action):
 
         return json.dumps(payload)
 
+    print("requestdata request patch: ", data)
     try:
         _get_action('requestdata_request_patch', data)
     except NotAuthorized:
@@ -1122,6 +1133,12 @@ def handle_new_request_action(username, request_action):
         }
 
         return json.dumps(error)
+    
+    if 'data_shared' in data:
+        return json.dumps({
+            'success': True,
+            'message': 'Revoke successfully.'
+        })
 
     to = data['send_to']
 
@@ -1164,6 +1181,7 @@ def handle_new_request_action(username, request_action):
     methods=['GET', 'POST']
 )
 def handle_open_request_action(username, request_action):
+    print("open request action")
     data = dict(tk.request.POST)
     if 'data_shared' in data:
         data['data_shared'] = asbool(data['data_shared'])
